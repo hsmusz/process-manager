@@ -1,0 +1,55 @@
+services:
+    api:
+        image: movecloser/php:8.3-full
+        depends_on:
+            - mysql
+            - redis
+        environment:
+            BUILD: 1
+        ports:
+            - "59100:80"
+        volumes:
+            - ./:/var/www:delegated
+            - ./storage/app/public:/var/www/public/storage
+
+    redis:
+        image: redis:6-alpine
+        environment:
+            ENABLE_REDIS: "true"
+        mem_limit: 2048m
+        volumes:
+            - redis:/data
+
+    mysql:
+        image: mariadb:10.4
+        restart: unless-stopped
+        volumes:
+            - dbdata:/var/lib/mysql
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: dev
+            MYSQL_USER: dev
+            MYSQL_PASSWORD: dev
+
+    adminer:
+        image: adminer:4.8.1-standalone
+        restart: unless-stopped
+        environment:
+            ADMINER_DEFAULT_SERVER: mysql
+            ADMINER_DESIGN: 'hever'
+        depends_on:
+            - mysql
+        ports:
+            - "59180:8080"
+        command: [
+            "php",
+            "-d", "upload_max_filesize = 10G",
+            "-d", "post_max_size = 10G",
+            "-d", "memory_limit = -1",
+            "-d", "max_execution_time = 0",
+            "-S", "[::]:8080",
+            "-t", "/var/www/html"
+        ]
+volumes:
+    dbdata:
+    redis:

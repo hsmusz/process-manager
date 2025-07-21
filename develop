@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+# Decide which docker-compose file to use
+COMPOSE="docker compose"
+COMPOSERUN="${COMPOSE} exec "
+
+if [[ $# -gt 0 ]];then
+    if [[ "$1" == "reload" ]]; then
+        shift 1
+        ${COMPOSE} down && ${COMPOSE} up -d
+    elif [[ "$1" == "artisan" ]] || [[ "$1" == "art" ]]; then
+        shift 1
+        ${COMPOSERUN} api php artisan "$@"
+    elif [[ "$1" == "composer" ]]; then
+        shift 1
+        ${COMPOSERUN} api composer "$@"
+    elif [[ "$1" == "test" ]] && [[ "$2" == "--no-migration" ]]; then
+        shift 2
+        ${COMPOSERUN} -e REFRESH=0 api php -d opcache.enable_cli=1 ./vendor/bin/phpunit --testdox "$@"
+    elif [[ "$1" == "test" ]]; then
+        shift 1
+        ${COMPOSERUN} -e REFRESH=1 api php -d opcache.enable_cli=1 ./vendor/bin/phpunit --testdox "$@"
+    elif [[ "$1" == "cov" ]]; then
+        shift 1
+        ${COMPOSERUN} api php -d memory_limit=-1 -d pcov.enabled=1 -d pcov.directory=. -d pcov.exclude="~vendor~" ./vendor/bin/phpunit --configuration phpunit-coverage.xml "$@"
+    elif [[ "$1" == "docs" ]]; then
+        shift 1
+        ${COMPOSERUN} api php artisan l5-swagger:generate
+    elif [[ "$1" == "cs:dry" ]] || [[ "$1" == "cs" ]]; then
+        shift 1
+        ${COMPOSERUN} api composer quality:cs:dry
+    elif [[ "$1" == "cs:fix" ]]; then
+        shift 1
+        ${COMPOSERUN} api composer quality:cs:fix
+    elif [[ "$1" == "console" ]] || [[ "$1" == "bash" ]]; then
+        shift 1
+        ${COMPOSERUN} api bash
+    elif [[ "$1" == "mysql-import" ]]; then
+        shift 1
+        ${COMPOSE} exec -T mysql mariadb -uroot -proot dev
+    else
+        ${COMPOSE} "$@"
+    fi
+else
+    ${COMPOSE} ps
+fi
