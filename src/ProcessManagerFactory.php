@@ -4,26 +4,33 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager;
 
+use InvalidArgumentException;
+use Movecloser\ProcessManager\Interfaces\ProcessesRepository;
 use Movecloser\ProcessManager\Interfaces\ProcessManager;
-use Movecloser\ProcessManager\Models\Process;
-use Movecloser\ProcessManager\Enum\ProcessStatus;
-use Exception;
 
 class ProcessManagerFactory
 {
-    public const int MAX_RETRIES = 50;
-    public const int RETRY_AFTER = 60; // in seconds
+    protected static array $managers = [];
 
     /**
      * @throws \Illuminate\Contracts\Container\BindingResolutionException
      * @throws \Exception
      */
-    public static function make(Process $process): ProcessManager
+    public static function make(string $type): ProcessManager
     {
-        // @todo: move to Provider
-        return match ($process->type) {
-            default => throw new Exception('Unknown process type.')
-        };
+        if (!in_array($type, static::$managers)) {
+            throw new InvalidArgumentException(sprintf('The manager type "%s" does not exist.', $type));
+        }
 
+        $steps = static::$managers[$type];
+
+        return new $type(new $steps(), app()->make(ProcessesRepository::class));
+    }
+
+    public static function registerManagers(array $managers): void
+    {
+        // @todo: validate if key => value are Manager => Steps
+
+        static::$managers = array_merge(static::$managers, $managers);
     }
 }

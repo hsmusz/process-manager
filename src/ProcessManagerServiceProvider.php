@@ -45,5 +45,7 @@ class ProcessManagerServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(
             __DIR__ . '/../config/process-manager.php', 'process-manager'
         );
+
+        $this->app->singleton(\Movecloser\ProcessManager\Interfaces\ProcessLogger::class, ProcessLogger::class);
     }
 }

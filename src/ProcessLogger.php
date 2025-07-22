@@ -1,0 +1,28 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Movecloser\ProcessManager;
+
+class ProcessLogger implements Interfaces\ProcessLogger
+{
+    private array $bag = [];
+
+    public function dump(): array
+    {
+        return $this->bag;
+    }
+
+    public function log(string $action, array $payload): void
+    {
+        $this->bag[] = [
+            'action' => $action,
+            'payload' => $payload,
+        ];
+    }
+
+    public function start(): void
+    {
+        $this->bag = [];
+    }
+}

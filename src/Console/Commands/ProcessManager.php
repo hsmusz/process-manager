@@ -99,8 +99,8 @@ class ProcessManager extends Command
                 throw new ProcessManagerException('Fatal error in processes, fix it first!');
             }
 
-            $this->info(sprintf('Handling process: %s | %s', $process->id, $process->increment_id));
-            $manager = ProcessManagerFactory::make($process);
+            $this->info(sprintf('Handling process: %s', $process->id));
+            $manager = ProcessManagerFactory::make($process->type);
             $manager->handle($process);
         } catch (Throwable $e) {
             $this->error($e->getMessage());

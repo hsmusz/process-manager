@@ -11,12 +11,14 @@ use Movecloser\ProcessManager\Enum\ProcessStatus;
 
 class Process extends Model
 {
-    public const string META = 'meta';
-    public const string STATUS = 'status';
-    public const string TYPE = 'type';
-    public const string VERSION = 'version';
     public const string ATTEMPTS = 'attempts';
+    public const string MANAGER = 'manager';
+    public const string META = 'meta';
+    public const string PROCESSABLE_ID = 'processable_id';
+    public const string PROCESSABLE_TYPE = 'processable_type';
     public const string RETRY_AFTER = 'retry_after';
+    public const string STATUS = 'status';
+    public const string VERSION = 'version';
 
     protected $casts = [
         self::META => 'array',
@@ -25,12 +27,14 @@ class Process extends Model
     ];
 
     protected $fillable = [
-        self::META,
-        self::STATUS,
-        self::TYPE,
-        self::VERSION,
         self::ATTEMPTS,
+        self::MANAGER,
+        self::META,
+        self::PROCESSABLE_ID,
+        self::PROCESSABLE_TYPE,
         self::RETRY_AFTER,
+        self::STATUS,
+        self::VERSION,
     ];
 
     protected $table = 'processes';

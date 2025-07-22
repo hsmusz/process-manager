@@ -4,23 +4,99 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager\Managers;
 
-use Movecloser\ProcessManager\Interfaces\ProcessesRepository;
-use Movecloser\ProcessManager\Models\Process;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Mail;
+use Movecloser\ProcessManager\Enum\ProcessStatus;
+use Movecloser\ProcessManager\Exceptions\ProcessException;
+use Movecloser\ProcessManager\Facades\ProcessLogger;
+use Movecloser\ProcessManager\Interfaces\ProcessesRepository;
+use Movecloser\ProcessManager\Interfaces\ProcessSteps;
+use Movecloser\ProcessManager\Lockdown\Mail\Lockdown;
+use Movecloser\ProcessManager\Models\Process;
+use Movecloser\ProcessManager\Models\ProcessStep;
+use Movecloser\ProcessManager\Processable;
+use Movecloser\ProcessManager\Steps\AbstractSteps;
 use Throwable;
 
 abstract class AbstractManager
 {
+    protected const int MAX_RETRIES = 50;
+    protected const int RETRY_AFTER = 60; // in seconds
+
     protected ?string $nextStep = null;
     protected ?Process $process;
-    protected ?ProcessLoggerManager $processLoggerManager;
 
     public function __construct(
+        protected readonly ProcessSteps $steps,
         protected readonly ProcessesRepository $processes,
-        protected readonly StepsInterface $steps,
     ) {
+    }
+
+    public static function hasProcessFor(Processable $processable): bool
+    {
+        return Process::query()
+            ->where([
+                'manager' => static::class,
+                'processable_type' => $processable->type,
+                'processable_id' => $processable->id,
+            ])
+            ->exists();
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public function createProcess(
+        Processable $processable,
+        int $version,
+        ProcessStatus $status,
+        array $meta = [],
+    ): self {
+        try {
+            $this->process = Process::create([
+                Process::STATUS => $status,
+                Process::MANAGER => static::class,
+                Process::PROCESSABLE_TYPE => $processable->type,
+                Process::PROCESSABLE_ID => $processable->id,
+                Process::VERSION => $version,
+                Process::META => $meta,
+            ]);
+
+            return $this;
+        } catch (Exception $e) {
+            throw new Exception(sprintf('Error while creating process, Error: %s', $e->getMessage()));
+        }
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function finishProcess(ProcessStatus $status): void
+    {
+        $this->process->status = $status;
+        $this->process->save();
+    }
+
+    public function getNextStep(): ?string
+    {
+        if ($this->process->steps()->where('step', AbstractSteps::FINISH)->exists()) {
+            throw new ProcessException('Process already finished.', [], ProcessStatus::INFO);
+        }
+
+        $stepProcess = $this->process->steps()
+            ->orderBy('id', 'desc')
+            ->first();
+
+        if (!$stepProcess) {
+            return $this->steps->start();
+        }
+
+        if (in_array($stepProcess->status, [ProcessStatus::ERROR, ProcessStatus::RETRY, ProcessStatus::EXCEPTION])) {
+            return $stepProcess->step;
+        }
+
+        return $this->steps->next($stepProcess->step);
     }
 
     /**
@@ -65,20 +141,12 @@ abstract class AbstractManager
     }
 
     /**
-     * @throws Exception
-     */
-    protected function finishProcess(ProcessStatus $status): void
-    {
-        $this->processLoggerManager->finishProcess($status);
-    }
-
-    /**
      * @throws \Exception
      */
     protected function handleException(Throwable $e): void
     {
         $status = ProcessStatus::RETRY;
-        $retry = $this->process->attempts < JobManagerService::MAX_RETRIES;
+        $retry = $this->process->attempts < self::MAX_RETRIES;
         if (!$retry) {
             $status = ProcessStatus::ERROR;
         }
@@ -93,7 +161,7 @@ abstract class AbstractManager
             $details = $e->details();
         }
 
-        $this->processLoggerManager->addStep(
+        $this->addStep(
             $e->getMessage(),
             $this->nextStep,
             $status,
@@ -103,7 +171,7 @@ abstract class AbstractManager
         if ($retry) {
             $this->finishProcess(ProcessStatus::RETRY);
             $multiply = max($this->process->attempts - 3, 1);
-            $this->process->retry_after = Carbon::now()->addSeconds(JobManagerService::RETRY_AFTER * $multiply);
+            $this->process->retry_after = Carbon::now()->addSeconds(self::RETRY_AFTER * $multiply);
             $this->process->save();
         } else {
             $this->finishProcess($status);
@@ -113,13 +181,13 @@ abstract class AbstractManager
                     new Lockdown(
                         $e->getMessage(),
                         $details,
-                        'AELIA Microservice - PROCESS MANAGER LOCKDOWN!'
+                        config('app.name') . ' Microservice - PROCESS MANAGER LOCKDOWN!'
                     )
                 );
         }
     }
 
-    protected function nextStep(string $currentStep): void
+    protected function prepareNextStep(string $currentStep): void
     {
         $this->nextStep = $this->steps->next($currentStep);
     }
@@ -137,7 +205,7 @@ abstract class AbstractManager
             logger()->info('Process | processing process ' . $this->process->id . ' step ' . $step);
 
             $this->processStep($step);
-            $this->nextStep($step);
+            $this->prepareNextStep($step);
         }
     }
 
@@ -153,11 +221,7 @@ abstract class AbstractManager
         }
 
         $this->steps->validate();
-
-        $this->processLoggerManager = new ProcessLoggerManager();
-        $this->processLoggerManager->setProcess($process);
-        $this->processLoggerManager->setSteps($this->steps);
-        $this->nextStep = $this->processLoggerManager->getNextStep();
+        $this->nextStep = $this->getNextStep();
 
         if (empty($this->nextStep)) {
             throw new ProcessException('No valid step found to resume Process');
@@ -171,11 +235,41 @@ abstract class AbstractManager
      */
     protected function success(string $msg, string $step, array $details = []): void
     {
-        $this->processLoggerManager->addStep(
+        $this->addStep(
             $msg,
             $step,
             ProcessStatus::SUCCESS,
             $details,
         );
+    }
+
+    /**
+     * @throws Exception
+     */
+    private function addStep(
+        string $message,
+        ?string $step,
+        ProcessStatus $status,
+        array $details = [],
+    ): void {
+        $detailsJson = json_encode($details, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT);
+        if ($detailsJson === false) {
+            throw new Exception('Could not encode details to JSON.');
+        }
+
+        if (!$step) {
+            $step = $this->steps->finish();
+            $status = ProcessStatus::INFO;
+        }
+
+        $processStep = new ProcessStep();
+        $processStep->setAttribute(ProcessStep::STEP, $step);
+        $processStep->setAttribute(ProcessStep::STATUS, $status);
+        $processStep->setAttribute(ProcessStep::MESSAGE, $message);
+        $processStep->setAttribute(ProcessStep::DETAILS, $detailsJson);
+        $processStep->setAttribute(ProcessStep::LOGS, json_encode(ProcessLogger::dump(), JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT));
+        $processStep->process()->associate($this->process);
+
+        $processStep->save();
     }
 }

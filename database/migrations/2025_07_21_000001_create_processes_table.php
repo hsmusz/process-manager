@@ -12,24 +12,26 @@ return new class extends Migration {
     {
         Schema::create('processes', function (Blueprint $table) {
             $table->id();
-            $table->string('type');
+            $table->string('manager');
+            $table->string('processable_type');
+            $table->string('processable_id');
             $table->string('status');
-            $table->json('meta');
+            $table->json('meta')->default('{}');
             $table->unsignedInteger('version')->default(0);
             $table->unsignedInteger('attempts')->default(0);
             $table->dateTimeTz('retry_at')->nullable();
-            $table->timestamps();
+            $table->timestampsTz();
         });
 
         Schema::create('process_steps', function (Blueprint $table) {
             $table->id();
-            $table->string('type');
+            $table->foreign('process_id')->references('id')->on('processes')->onDelete('cascade');
+            $table->string('step');
             $table->string('status');
-            $table->json('meta');
-            $table->unsignedInteger('version')->default(0);
-            $table->unsignedInteger('attempts')->default(0);
-            $table->dateTimeTz('retry_at')->nullable();
-            $table->timestamps();
+            $table->text('message');
+            $table->longText('details');
+            $table->longText('logs')->nullable();
+            $table->timestampsTz();
         });
     }
 
@@ -38,6 +40,7 @@ return new class extends Migration {
      */
     public function down(): void
     {
+        Schema::dropIfExists('process_steps');
         Schema::dropIfExists('processes');
     }
 };
