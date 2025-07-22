@@ -33,7 +33,7 @@ class ProcessManagerServiceProvider extends ServiceProvider
             ]);
         }
 
-        $this->app->bind(ProcessesRepository::class, new Repositories\ProcessesRepository());
+        $this->app->bind(ProcessesRepository::class, Repositories\ProcessesRepository::class);
     }
 
     /**
