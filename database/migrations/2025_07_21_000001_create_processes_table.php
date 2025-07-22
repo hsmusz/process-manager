@@ -25,6 +25,7 @@ return new class extends Migration {
 
         Schema::create('process_steps', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('process_id');
             $table->foreign('process_id')->references('id')->on('processes')->onDelete('cascade');
             $table->string('step');
             $table->string('status');

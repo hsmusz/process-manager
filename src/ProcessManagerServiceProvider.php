@@ -6,8 +6,10 @@ namespace Movecloser\ProcessManager;
 
 use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Nova\Nova;
 use Movecloser\ProcessManager\Console\Commands\ProcessManager;
 use Movecloser\ProcessManager\Interfaces\ProcessesRepository;
+use Movecloser\ProcessManager\Nova\Resources\Process;
 
 class ProcessManagerServiceProvider extends ServiceProvider
 {
@@ -18,14 +20,10 @@ class ProcessManagerServiceProvider extends ServiceProvider
     {
         AboutCommand::add('Process Manager', fn() => ['Version' => '1.0.0']);
 
-        // Publish configuration
-        $this->publishes([
-            __DIR__ . '/../config/process-manager.php' => config_path('process-manager.php'),
-        ], 'config');
+        $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
 
-        $this->publishesMigrations([
-            __DIR__ . '/../database/migrations' => database_path('migrations'),
-        ]);
+        // Publish configuration
+        $this->publishes([__DIR__ . '/../config/process-manager.php' => config_path('process-manager.php')], 'config');
 
         if ($this->app->runningInConsole()) {
             $this->commands([
@@ -34,6 +32,10 @@ class ProcessManagerServiceProvider extends ServiceProvider
         }
 
         $this->app->bind(ProcessesRepository::class, Repositories\ProcessesRepository::class);
+
+        Nova::resources([
+            Process::class
+        ]);
     }
 
     /**

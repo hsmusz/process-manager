@@ -14,7 +14,7 @@ class LockFactory
      */
     public static function make(): Lock
     {
-        return match (config('integrator.lockdown_method')) {
+        return match (config('process-manager.lockdown_method')) {
             'database' => new DBLock(),
             'file' => new FileLock(),
             'no-lock' => new NoLock(),

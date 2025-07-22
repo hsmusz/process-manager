@@ -11,12 +11,12 @@ use Movecloser\ProcessManager\Enum\ProcessStatus;
 use Movecloser\ProcessManager\Exceptions\ProcessException;
 use Movecloser\ProcessManager\Facades\ProcessLogger;
 use Movecloser\ProcessManager\Interfaces\ProcessesRepository;
-use Movecloser\ProcessManager\Interfaces\ProcessSteps;
+use Movecloser\ProcessManager\Interfaces\Process;
 use Movecloser\ProcessManager\Lockdown\Mail\Lockdown;
-use Movecloser\ProcessManager\Models\Process;
+use Movecloser\ProcessManager\Models\Process as ProcessModel;
 use Movecloser\ProcessManager\Models\ProcessStep;
 use Movecloser\ProcessManager\Processable;
-use Movecloser\ProcessManager\Steps\AbstractSteps;
+use Movecloser\ProcessManager\Processes\AbstractProcess;
 use Throwable;
 
 abstract class AbstractManager
@@ -25,17 +25,17 @@ abstract class AbstractManager
     protected const int RETRY_AFTER = 60; // in seconds
 
     protected ?string $nextStep = null;
-    protected ?Process $process;
+    protected ?ProcessModel $process;
 
     public function __construct(
-        protected readonly ProcessSteps $steps,
+        protected readonly Process $instruction,
         protected readonly ProcessesRepository $processes,
     ) {
     }
 
     public static function hasProcessFor(Processable $processable): bool
     {
-        return Process::query()
+        return ProcessModel::query()
             ->where([
                 'manager' => static::class,
                 'processable_type' => $processable->type,
@@ -50,17 +50,15 @@ abstract class AbstractManager
     public function createProcess(
         Processable $processable,
         int $version,
-        ProcessStatus $status,
-        array $meta = [],
     ): self {
         try {
-            $this->process = Process::create([
-                Process::STATUS => $status,
-                Process::MANAGER => static::class,
-                Process::PROCESSABLE_TYPE => $processable->type,
-                Process::PROCESSABLE_ID => $processable->id,
-                Process::VERSION => $version,
-                Process::META => $meta,
+            $this->process = ProcessModel::create([
+                ProcessModel::STATUS => ProcessStatus::READY,
+                ProcessModel::MANAGER => static::class,
+                ProcessModel::PROCESSABLE_TYPE => $processable->type,
+                ProcessModel::PROCESSABLE_ID => $processable->id,
+                ProcessModel::VERSION => $version,
+                ProcessModel::META => $processable->meta,
             ]);
 
             return $this;
@@ -80,7 +78,7 @@ abstract class AbstractManager
 
     public function getNextStep(): ?string
     {
-        if ($this->process->steps()->where('step', AbstractSteps::FINISH)->exists()) {
+        if ($this->process->steps()->where('step', AbstractProcess::FINISH)->exists()) {
             throw new ProcessException('Process already finished.', [], ProcessStatus::INFO);
         }
 
@@ -89,20 +87,20 @@ abstract class AbstractManager
             ->first();
 
         if (!$stepProcess) {
-            return $this->steps->start();
+            return $this->instruction->start();
         }
 
         if (in_array($stepProcess->status, [ProcessStatus::ERROR, ProcessStatus::RETRY, ProcessStatus::EXCEPTION])) {
             return $stepProcess->step;
         }
 
-        return $this->steps->next($stepProcess->step);
+        return $this->instruction->next($stepProcess->step);
     }
 
     /**
      * @throws \Throwable
      */
-    public function handle(Process $process): void
+    public function handle(ProcessModel $process): void
     {
         $this->process = $process;
 
@@ -189,7 +187,7 @@ abstract class AbstractManager
 
     protected function prepareNextStep(string $currentStep): void
     {
-        $this->nextStep = $this->steps->next($currentStep);
+        $this->nextStep = $this->instruction->next($currentStep);
     }
 
     /**
@@ -197,8 +195,8 @@ abstract class AbstractManager
      */
     protected function process(): void
     {
-        foreach ($this->steps->getValues() as $step) {
-            if ($this->steps->isAfter($this->nextStep, $step)) {
+        foreach ($this->instruction->getValues() as $step) {
+            if ($this->instruction->isAfter($this->nextStep, $step)) {
                 continue;
             }
 
@@ -214,13 +212,13 @@ abstract class AbstractManager
     /**
      * @throws \Exception
      */
-    protected function restoreProcessLogger(?Process $process): void
+    protected function restoreProcessLogger(?ProcessModel $process): void
     {
         if (empty($process)) {
             throw new ProcessException('Missing existing process for restoring ProcessLogger');
         }
 
-        $this->steps->validate();
+        $this->instruction->validate();
         $this->nextStep = $this->getNextStep();
 
         if (empty($this->nextStep)) {
@@ -258,7 +256,7 @@ abstract class AbstractManager
         }
 
         if (!$step) {
-            $step = $this->steps->finish();
+            $step = $this->instruction->finish();
             $status = ProcessStatus::INFO;
         }
 

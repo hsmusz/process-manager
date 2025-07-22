@@ -20,7 +20,7 @@ class ProcessManager extends Command
     private const int WORKER_LIFETIME = 5; // in minutes
 
     protected $description = 'Handling of new processes ';
-    protected $signature = 'app:process:work {--remove-lock}';
+    protected $signature = 'process-manager:work {--remove-lock}';
 
     private ProcessesRepository $processes;
 

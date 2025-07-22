@@ -27,6 +27,11 @@ class ProcessManagerFactory
         return new $type(new $steps(), app()->make(ProcessesRepository::class));
     }
 
+    public static function createProcess(string $type, Processable $processable): void
+    {
+        self::make($type)->createProcess($processable, $type::$verions);
+    }
+
     public static function registerManagers(array $managers): void
     {
         // @todo: validate if key => value are Manager => Steps

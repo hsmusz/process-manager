@@ -12,7 +12,9 @@
     "require": {
         "php": "^8.3",
         "illuminate/support": "^12.0",
-        "laravel/nova": "^4.0"
+        "laravel/nova": "^4.0",
+        "hapheus/nova-single-value-card": "dev-main",
+        "digital-creative/icon-action-toolbar": "dev-main"
     },
     "repositories": [
         {

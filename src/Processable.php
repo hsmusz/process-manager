@@ -9,6 +9,7 @@ class Processable
     public function __construct(
         public readonly string $type,
         public readonly mixed $id,
+        public readonly array $meta = [],
     ) {
     }
 

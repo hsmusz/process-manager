@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Movecloser\ProcessManager\Steps;
+namespace Movecloser\ProcessManager\Processes;
 
 use Movecloser\ProcessManager\Exceptions\ProcessException;
 
-abstract class AbstractSteps
+abstract class AbstractProcess
 {
-    protected const array CASES = [];
+    protected const array STEPS = [];
     public const string START = '__START__';
     public const string FINISH = '__FINISH__';
     public static int $version = 0;
@@ -24,9 +24,9 @@ abstract class AbstractSteps
         return self::FINISH;
     }
 
-    public function getValues(): array
+    public function getSteps(): array
     {
-        return static::CASES;
+        return static::STEPS;
     }
 
     public function isAfter(string $before, string $after): bool
@@ -38,7 +38,7 @@ abstract class AbstractSteps
     {
         $index = self::getIndex($val);
 
-        return static::CASES[$index + 1] ?? null;
+        return static::STEPS[$index + 1] ?? null;
     }
 
     public function start(): string
@@ -58,6 +58,6 @@ abstract class AbstractSteps
 
     private static function getIndex(string $val): ?int
     {
-        return array_search($val, static::CASES);
+        return array_search($val, static::STEPS);
     }
 }
