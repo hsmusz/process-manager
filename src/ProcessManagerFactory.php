@@ -25,7 +25,7 @@ class ProcessManagerFactory
         );
     }
 
-    public static function registerManagers(array $managers): void
+    public static function registerProcesses(array $managers): void
     {
         // @todo: validate for unique processes names
 
