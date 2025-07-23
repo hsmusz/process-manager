@@ -89,8 +89,8 @@ class ProcessManager implements Contracts\ProcessManager
         }
 
         $details = [];
-        if (method_exists($e, 'details')) {
-            $details = $e->details();
+        if (method_exists($e, 'getDetails')) {
+            $details = $e->getDetails();
         }
 
         $this->persistStep($this->nextStep, $status, $e->getMessage(), $details);

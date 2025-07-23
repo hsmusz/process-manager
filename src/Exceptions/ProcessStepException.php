@@ -13,14 +13,21 @@ class ProcessStepException extends Exception
 {
     private array $details;
 
-    public function __construct($message = '', $details = [])
+    public function __construct(Exception|string $exception, $details = [])
     {
-        parent::__construct($message);
+        if ($exception instanceof Exception) {
+            if (method_exists($exception, 'getDetails')) {
+                $details = $exception->getDetails();
+            }
+            parent::__construct($exception->getMessage(), $exception->getCode(), $exception);
+        } else {
+            parent::__construct($exception);
+        }
 
         $this->details = $details;
     }
 
-    public function details(): array
+    public function getDetails(): array
     {
         return $this->details;
     }
