@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager;
 
-class ProcessLogger implements Interfaces\ProcessLogger
+class ProcessLogger implements Contracts\ProcessLogger
 {
     private array $bag = [];
 

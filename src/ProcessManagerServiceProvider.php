@@ -8,7 +8,7 @@ use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Nova\Nova;
 use Movecloser\ProcessManager\Console\Commands\ProcessManager;
-use Movecloser\ProcessManager\Interfaces\ProcessesRepository;
+use Movecloser\ProcessManager\Contracts\ProcessesRepository;
 use Movecloser\ProcessManager\Nova\Resources\Process;
 
 class ProcessManagerServiceProvider extends ServiceProvider
@@ -48,6 +48,6 @@ class ProcessManagerServiceProvider extends ServiceProvider
             __DIR__ . '/../config/process-manager.php', 'process-manager'
         );
 
-        $this->app->singleton(\Movecloser\ProcessManager\Interfaces\ProcessLogger::class, ProcessLogger::class);
+        $this->app->singleton(\Movecloser\ProcessManager\Contracts\ProcessLogger::class, ProcessLogger::class);
     }
 }

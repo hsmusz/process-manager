@@ -5,37 +5,30 @@ declare(strict_types=1);
 namespace Movecloser\ProcessManager;
 
 use InvalidArgumentException;
-use Movecloser\ProcessManager\Interfaces\ProcessesRepository;
-use Movecloser\ProcessManager\Interfaces\ProcessManager;
+use Movecloser\ProcessManager\Contracts\ProcessesRepository;
+use Movecloser\ProcessManager\Contracts\ProcessManager;
+use Movecloser\ProcessManager\Models\Process;
 
 class ProcessManagerFactory
 {
-    protected static array $managers = [];
+    protected static array $processes = [];
 
-    /**
-     * @throws \Illuminate\Contracts\Container\BindingResolutionException
-     * @throws \Exception
-     */
-    public static function make(string $type): ProcessManager
+    public static function make(Process $process): ProcessManager
     {
-        if (!in_array($type, static::$managers)) {
-            throw new InvalidArgumentException(sprintf('The manager type "%s" does not exist.', $type));
+        if (!in_array($process->type, static::$processes)) {
+            throw new InvalidArgumentException(sprintf('The manager type "%s" does not exist.', $process->type));
         }
 
-        $steps = static::$managers[$type];
-
-        return new $type(new $steps(), app()->make(ProcessesRepository::class));
-    }
-
-    public static function createProcess(string $type, Processable $processable): void
-    {
-        self::make($type)->createProcess($processable, $type::$verions);
+        return new \Movecloser\ProcessManager\ProcessManager(
+            $process,
+            app()->make(ProcessesRepository::class)
+        );
     }
 
     public static function registerManagers(array $managers): void
     {
-        // @todo: validate if key => value are Manager => Steps
+        // @todo: validate for unique processes names
 
-        static::$managers = array_merge(static::$managers, $managers);
+        static::$processes = array_merge(static::$processes, $managers);
     }
 }

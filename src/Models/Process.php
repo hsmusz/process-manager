@@ -12,7 +12,7 @@ use Movecloser\ProcessManager\Enum\ProcessStatus;
 class Process extends Model
 {
     public const string ATTEMPTS = 'attempts';
-    public const string MANAGER = 'manager';
+    public const string PROCESS = 'process';
     public const string META = 'meta';
     public const string PROCESSABLE_ID = 'processable_id';
     public const string PROCESSABLE_TYPE = 'processable_type';
@@ -28,7 +28,7 @@ class Process extends Model
 
     protected $fillable = [
         self::ATTEMPTS,
-        self::MANAGER,
+        self::PROCESS,
         self::META,
         self::PROCESSABLE_ID,
         self::PROCESSABLE_TYPE,

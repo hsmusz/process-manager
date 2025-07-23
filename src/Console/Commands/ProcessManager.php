@@ -7,7 +7,7 @@ namespace Movecloser\ProcessManager\Console\Commands;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Movecloser\ProcessManager\Exceptions\ProcessManagerException;
-use Movecloser\ProcessManager\Interfaces\ProcessesRepository;
+use Movecloser\ProcessManager\Contracts\ProcessesRepository;
 use Movecloser\ProcessManager\Lockdown\CommandLock;
 use Movecloser\ProcessManager\ProcessManagerFactory;
 use Throwable;
@@ -100,8 +100,8 @@ class ProcessManager extends Command
             }
 
             $this->info(sprintf('Handling process: %s', $process->id));
-            $manager = ProcessManagerFactory::make($process->type);
-            $manager->handle($process);
+            $manager = ProcessManagerFactory::make($process);
+            $manager->handle();
         } catch (Throwable $e) {
             $this->error($e->getMessage());
 

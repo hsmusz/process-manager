@@ -5,13 +5,46 @@ declare(strict_types=1);
 namespace Movecloser\ProcessManager\Repositories;
 
 use Carbon\Carbon;
+use Exception;
+use Movecloser\ProcessManager\Contracts\ProcessesRepository as Contract;
 use Movecloser\ProcessManager\Enum\ProcessStatus;
-use Movecloser\ProcessManager\Interfaces\ProcessesRepository as Contract;
 use Movecloser\ProcessManager\Models\Process;
+use Movecloser\ProcessManager\Processable;
+use Throwable;
 
 class ProcessesRepository implements Contract
 {
     private const int PROCESS_TTL = 60 * 60; // 1 hour
+
+    /**
+     * @throws \Exception
+     */
+    public static function createProcess(string $process, Processable $processable): Process
+    {
+        try {
+            return Process::create([
+                Process::STATUS => ProcessStatus::PENDING,
+                Process::PROCESS => $process,
+                Process::PROCESSABLE_TYPE => $processable->type,
+                Process::PROCESSABLE_ID => $processable->id,
+                Process::VERSION => $process::$version,
+                Process::META => $processable->meta,
+            ]);
+        } catch (Throwable $e) {
+            throw new Exception(sprintf('Error while creating process, Error: %s', $e->getMessage()));
+        }
+    }
+
+    public static function hasProcessFor(string $process, Processable $processable): bool
+    {
+        return Process::query()
+            ->where([
+                'process_class' => $process,
+                'processable_type' => $processable->type,
+                'processable_id' => $processable->id,
+            ])
+            ->exists();
+    }
 
     public function hasTimeoutProcess(): bool
     {

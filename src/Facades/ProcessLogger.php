@@ -10,6 +10,6 @@ class ProcessLogger extends Facade
 {
     protected static function getFacadeAccessor(): string
     {
-        return \Movecloser\ProcessManager\Interfaces\ProcessLogger::class;
+        return \Movecloser\ProcessManager\Contracts\ProcessLogger::class;
     }
 }

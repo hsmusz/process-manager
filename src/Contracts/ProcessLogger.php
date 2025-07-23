@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Movecloser\ProcessManager\Interfaces;
+namespace Movecloser\ProcessManager\Contracts;
 
 interface ProcessLogger
 {

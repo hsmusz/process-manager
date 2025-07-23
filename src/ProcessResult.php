@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager;
 
-readonly class Processable
+class ProcessResult
 {
     public function __construct(
-        public string $type,
-        public mixed $id,
-        public array $meta = [],
+        public string $message,
+        public array $data = [],
     ) {
     }
 
