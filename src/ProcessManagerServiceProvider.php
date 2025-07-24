@@ -29,11 +29,16 @@ class ProcessManagerServiceProvider extends ServiceProvider
         $this->publishes([__DIR__ . '/../config/nova.php' => config_path('nova.php')], 'config');
 
         // Load views if they exist
-        if (is_dir(__DIR__.'/../resources/views')) {
-            $this->loadViewsFrom(__DIR__.'/../resources/views', 'process-manager');
+        if (is_dir(__DIR__ . '/../resources/views')) {
+            $this->loadViewsFrom(__DIR__ . '/../resources/views', 'process-manager');
         }
 
         if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__ . '/../database/migrations/2025_07_21_000001_create_processes_table.php'
+                => database_path('migrations/2025_07_21_000001_create_processes_table.php'),
+            ], 'migrations');
+
             $this->commands([
                 ProcessManager::class,
             ]);
