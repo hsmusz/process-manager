@@ -4,12 +4,6 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager\Nova\Resources;
 
-use Movecloser\ProcessManager\Enum\ProcessStatus;
-use Movecloser\ProcessManager\Models\Process as Model;
-use Movecloser\ProcessManager\Nova\Actions\AbortProcess;
-use Movecloser\ProcessManager\Nova\Actions\ReProcess;
-use Movecloser\ProcessManager\Nova\HideAllActions;
-use Movecloser\ProcessManager\Nova\Resource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Fields\Badge;
@@ -21,6 +15,13 @@ use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Menu\MenuItem;
 use Laravel\Nova\Panel;
+use Movecloser\ProcessManager\Enum\ProcessStatus;
+use Movecloser\ProcessManager\Models\Process as Model;
+use Movecloser\ProcessManager\Nova\Actions\AbortProcess;
+use Movecloser\ProcessManager\Nova\Actions\ReProcess;
+use Movecloser\ProcessManager\Nova\HideAllActions;
+use Movecloser\ProcessManager\Nova\Resource;
+use Movecloser\ProcessManager\ProcessManagerFactory;
 
 class Process extends Resource
 {
@@ -29,7 +30,7 @@ class Process extends Resource
     public static $group = 'Process Manager';
     public static string $model = Model::class;
     public static $search = [
-        'increment_id',
+        'processable_id',
         'meta',
     ];
     public static array $sort = [
@@ -63,15 +64,13 @@ class Process extends Resource
             })->filter()->flatten(1)->toArray();
 
         return [
-            Text::make('Manager', Model::CLASS)
-                ->displayUsing(fn($type) => match ($type) {
-                    default => $type,
-                })
+            Text::make('Process', Model::PROCESS)
+                ->displayUsing(fn($type) => ProcessManagerFactory::map($type))
                 ->sortable()
                 ->readonly(),
 
             Text::make('Processable', Model::PROCESSABLE_ID)
-                ->resolveUsing(fn() => $this->meta['order_increment_id'])
+                ->resolveUsing(fn() => $this->meta['display']['processable_id'] ?? $this->resource->processable_id)
                 ->sortable()
                 ->readonly()
                 ->copyable(),
@@ -130,7 +129,6 @@ class Process extends Resource
     public function filters(NovaRequest $request): array
     {
         return [
-//            new Daterangepicker('Created at', 'created_at'),
         ];
     }
 

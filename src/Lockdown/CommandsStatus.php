@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Movecloser\ProcessManager\Lockdown;
 
 use Illuminate\Console\Command;
+use Movecloser\ProcessManager\Console\Commands\ProcessManager;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 
 class CommandsStatus extends Command
@@ -13,8 +14,6 @@ class CommandsStatus extends Command
     public const string COMMAND_STATUS_WORKING = 'Working';
     public const string COMMAND_STATUS_DISABLED = 'DISABLED';
     public const string COMMAND_STATUS_LOCKED = 'LOCKED';
-    public const array COMMANDS = [
-    ];
 
     protected $description = 'Get Lockable commands status';
     protected $signature = 'lock:commands:status';
@@ -45,15 +44,7 @@ class CommandsStatus extends Command
         $this->info(sprintf('2. Process Manager: %s', self::checkCommandStatus(ProcessManager::class)));
         $style = new OutputFormatterStyle('yellow');
         $this->output->getFormatter()->setStyle('warning', $style);
-        $i = 3;
-        foreach (self::COMMANDS as $command => $title) {
-            $status = self::checkCommandStatus($command);
-            $style = match ($status) {
-                self::COMMAND_STATUS_LOCKED => 'error',
-                self::COMMAND_STATUS_DISABLED => 'warning',
-                default => 'info'
-            };
-            $this->line(sprintf('%d. %s: %s', ++$i, $title, $status), $style);
-        }
+
+        // @todo: register commands
     }
 }

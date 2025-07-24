@@ -39,7 +39,7 @@ class ProcessesRepository implements Contract
     {
         return Process::query()
             ->where([
-                'process_class' => $process,
+                'process' => $process,
                 'processable_type' => $processable->type,
                 'processable_id' => $processable->id,
             ])

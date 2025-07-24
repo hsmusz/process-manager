@@ -8,6 +8,7 @@ use InvalidArgumentException;
 use Movecloser\ProcessManager\Contracts\ProcessesRepository;
 use Movecloser\ProcessManager\Contracts\ProcessManager;
 use Movecloser\ProcessManager\Models\Process;
+use ReflectionClass;
 
 class ProcessManagerFactory
 {
@@ -15,8 +16,8 @@ class ProcessManagerFactory
 
     public static function make(Process $process): ProcessManager
     {
-        if (!in_array($process->type, static::$processes)) {
-            throw new InvalidArgumentException(sprintf('The manager type "%s" does not exist.', $process->type));
+        if (!array_key_exists($process->process, static::$processes)) {
+            throw new InvalidArgumentException(sprintf('The process "%s" is not registered.', $process->process));
         }
 
         return new \Movecloser\ProcessManager\ProcessManager(
@@ -25,10 +26,33 @@ class ProcessManagerFactory
         );
     }
 
-    public static function registerProcesses(array $managers): void
+    public static function map(string $process): string
     {
-        // @todo: validate for unique processes names
+        return static::$processes[$process] ?? $process;
+    }
 
-        static::$processes = array_merge(static::$processes, $managers);
+    /**
+     * @param array<class-string<\Movecloser\ProcessManager\Contracts\Process>, string> $processes
+     *
+     * @throws \ReflectionException
+     */
+    public static function registerProcesses(array $processes): void
+    {
+        foreach ($processes as $process => $label) {
+            if (!is_string($process) || !is_string($label)) {
+                throw new InvalidArgumentException('Array must contain Process => Label map');
+            }
+
+            $reflection = new ReflectionClass($process);
+            if (!$reflection->implementsInterface(Contracts\Process::class)) {
+                throw new InvalidArgumentException(sprintf('The process "%s" must implement Contracts\Process interface.', $process));
+            }
+
+            if (array_key_exists($process, static::$processes)) {
+                throw new InvalidArgumentException(sprintf('The process "%s" is already registered.', $process));
+            }
+        }
+
+        static::$processes = array_merge(static::$processes, $processes);
     }
 }

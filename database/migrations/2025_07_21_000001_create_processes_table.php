@@ -12,14 +12,14 @@ return new class extends Migration {
     {
         Schema::create('processes', function (Blueprint $table) {
             $table->id();
-            $table->string('manager');
+            $table->string('process');
             $table->string('processable_type');
             $table->string('processable_id');
             $table->string('status');
             $table->json('meta')->default('{}');
             $table->unsignedInteger('version')->default(0);
             $table->unsignedInteger('attempts')->default(0);
-            $table->dateTimeTz('retry_at')->nullable();
+            $table->dateTimeTz('retry_after')->nullable();
             $table->timestampsTz();
         });
 

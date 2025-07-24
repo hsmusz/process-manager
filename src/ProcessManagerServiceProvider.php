@@ -9,7 +9,9 @@ use Illuminate\Support\ServiceProvider;
 use Laravel\Nova\Nova;
 use Movecloser\ProcessManager\Console\Commands\ProcessManager;
 use Movecloser\ProcessManager\Contracts\ProcessesRepository;
+use Movecloser\ProcessManager\Nova\Dashboards\Main;
 use Movecloser\ProcessManager\Nova\Resources\Process;
+use Movecloser\ProcessManager\Nova\Resources\ProcessStep;
 
 class ProcessManagerServiceProvider extends ServiceProvider
 {
@@ -24,6 +26,7 @@ class ProcessManagerServiceProvider extends ServiceProvider
 
         // Publish configuration
         $this->publishes([__DIR__ . '/../config/process-manager.php' => config_path('process-manager.php')], 'config');
+        $this->publishes([__DIR__ . '/../config/nova.php' => config_path('nova.php')], 'config');
 
         if ($this->app->runningInConsole()) {
             $this->commands([
@@ -33,8 +36,13 @@ class ProcessManagerServiceProvider extends ServiceProvider
 
         $this->app->bind(ProcessesRepository::class, Repositories\ProcessesRepository::class);
 
+        Nova::dashboards([
+            new Main(),
+        ]);
+
         Nova::resources([
-            Process::class
+            Process::class,
+            ProcessStep::class,
         ]);
     }
 
@@ -44,9 +52,8 @@ class ProcessManagerServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Merge package configuration
-        $this->mergeConfigFrom(
-            __DIR__ . '/../config/process-manager.php', 'process-manager'
-        );
+        $this->mergeConfigFrom(__DIR__ . '/../config/process-manager.php', 'process-manager');
+        $this->mergeConfigFrom(__DIR__ . '/../config/nova.php', 'nova');
 
         $this->app->singleton(\Movecloser\ProcessManager\Contracts\ProcessLogger::class, ProcessLogger::class);
     }

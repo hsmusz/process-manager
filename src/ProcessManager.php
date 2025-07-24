@@ -132,8 +132,8 @@ class ProcessManager implements Contracts\ProcessManager
                 $result = $this->process->{$handler}();
             } elseif (class_exists($handler)) {
                 $reflection = new ReflectionClass($handler);
-                if (!($reflection instanceof ProcessTask)) {
-                    throw new ProcessException('Step task handler does not implement ProcessTask Interface', [
+                if (!$reflection->implementsInterface(ProcessTask::class)) {
+                    throw new ProcessException('Step task handler does not implement Contracts\ProcessTask Interface', [
                         'step' => $step,
                         'handler' => $handler,
                     ]);

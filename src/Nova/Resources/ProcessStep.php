@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager\Nova\Resources;
 
-use Movecloser\ProcessManager\Nova\HideAllActions;
-use Movecloser\ProcessManager\Nova\Resource;
 use Laravel\Nova\Fields\DateTime;
 use Laravel\Nova\Fields\Text;
 use Laravel\Nova\Http\Requests\NovaRequest;
+use Movecloser\ProcessManager\Nova\HideAllActions;
+use Movecloser\ProcessManager\Nova\Resource;
 
 class ProcessStep extends Resource
 {
