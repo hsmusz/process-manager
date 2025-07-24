@@ -103,7 +103,7 @@ class ProcessManager implements Contracts\ProcessManager
         } else {
             $this->finishProcess($status);
 
-            if(empty(config('process-manager.notify_on_lockdown'))) {
+            if (empty(config('process-manager.notify_on_lockdown'))) {
                 return;
             }
 
@@ -123,6 +123,7 @@ class ProcessManager implements Contracts\ProcessManager
      */
     protected function processLoop(): void
     {
+
         $this->process->boot();
 
         foreach ($this->process->getSteps() as $step => $handler) {
@@ -133,6 +134,8 @@ class ProcessManager implements Contracts\ProcessManager
             logger()->info('Process | processing process ' . $this->model->id . ' step ' . $step);
 
             $this->process->beforeNextStep();
+
+            ProcessLogger::start();
 
             if (method_exists($this->process, $handler)) {
                 $result = $this->process->{$handler}();
