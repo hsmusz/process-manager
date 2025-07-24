@@ -135,8 +135,6 @@ class ProcessManager implements Contracts\ProcessManager
 
             $this->process->beforeNextStep();
 
-            ProcessLogger::start();
-
             if (method_exists($this->process, $handler)) {
                 $result = $this->process->{$handler}();
             } elseif (class_exists($handler)) {

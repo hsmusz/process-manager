@@ -10,7 +10,10 @@ class ProcessLogger implements Contracts\ProcessLogger
 
     public function dump(): array
     {
-        return $this->bag;
+        $bag = $this->bag;
+        $this->bag = [];
+
+        return $bag;
     }
 
     public function log(string $action, array $payload): void
@@ -19,10 +22,5 @@ class ProcessLogger implements Contracts\ProcessLogger
             'action' => $action,
             'payload' => $payload,
         ];
-    }
-
-    public function start(): void
-    {
-        $this->bag = [];
     }
 }
