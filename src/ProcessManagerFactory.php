@@ -14,6 +14,10 @@ class ProcessManagerFactory
 {
     protected static array $processes = [];
 
+    /**
+     * @throws \Illuminate\Contracts\Container\BindingResolutionException
+     * @throws \InvalidArgumentException
+     */
     public static function make(Process $process): ProcessManager
     {
         if (!array_key_exists($process->process, static::$processes)) {
@@ -35,6 +39,7 @@ class ProcessManagerFactory
      * @param array<class-string<\Movecloser\ProcessManager\Contracts\Process>, string> $processes
      *
      * @throws \ReflectionException
+     * @throws \InvalidArgumentException
      */
     public static function registerProcesses(array $processes): void
     {

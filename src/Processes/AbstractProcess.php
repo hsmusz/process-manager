@@ -4,31 +4,39 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager\Processes;
 
+use Movecloser\ProcessManager\Contracts\ProcessSteps;
 use Movecloser\ProcessManager\Exceptions\ProcessException;
 use Movecloser\ProcessManager\Processable;
 use Movecloser\ProcessManager\ProcessResult;
+use Throwable;
 
-abstract class AbstractProcess
+abstract class AbstractProcess implements ProcessSteps
 {
-    protected const array STEPS = [];
+    use HasProcessSteps;
+
     public const string START = '__START__';
     public const string FINISH = '__FINISH__';
     public static int $version = 0;
-    private array $steps;
 
     public function __construct(
-        protected Processable $processable,
+        public readonly Processable $processable,
         protected int $bootVersion,
     ) {
     }
 
-    public function getSteps(): array
+    public function beforeNextStep(): void
     {
-        if (!isset($this->steps)) {
-            $this->steps = [self::START => 'handleStart'] + static::STEPS + [self::FINISH => 'handleFinish'];
-        }
+        // do nothing
+    }
 
-        return $this->steps;
+    public function boot(): void
+    {
+        // do nothing
+    }
+
+    public function handleException(Throwable $e): void
+    {
+        // do nothing
     }
 
     public function handleFinish(): ProcessResult
@@ -38,25 +46,7 @@ abstract class AbstractProcess
 
     public function handleStart(): ProcessResult
     {
-        return new ProcessResult('Start process');
-    }
-
-    public function isAfter(string $step, string $after): bool
-    {
-        return $this->getIndex($step) > $this->getIndex($after);
-    }
-
-    public function next(string $step): ?string
-    {
-        $index = $this->getIndex($step);
-        $keys = array_keys($this->getSteps());
-
-        return $this->getSteps()[$keys[$index + 1]] ?? null;
-    }
-
-    public function processable(): Processable
-    {
-        return $this->processable;
+        return new ProcessResult('Process started');
     }
 
     /**
@@ -67,10 +57,5 @@ abstract class AbstractProcess
         if (!is_null($this->bootVersion) && static::$version !== $this->bootVersion) {
             throw new ProcessException(sprintf('Invalid version detected. Please upgrade to version %d', static::$version));
         }
-    }
-
-    private function getIndex(string $val): ?int
-    {
-        return array_search($val, array_keys($this->steps));
     }
 }

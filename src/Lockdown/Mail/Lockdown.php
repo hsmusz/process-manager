@@ -7,14 +7,6 @@ namespace Movecloser\ProcessManager\Lockdown\Mail;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-/**
- * Class InvoiceCreated
- *
- * @package Modules\Invoices\Jobs
- *
- * @author  Hubert Smusz <hubert.smusz@movecloser.pl>
- * @version 1.0.0
- */
 class Lockdown extends Mailable
 {
     use SerializesModels;
@@ -29,13 +21,10 @@ class Lockdown extends Mailable
         $this->details = $details;
     }
 
-    /**
-     * @return $this
-     */
     public function build(): self
     {
         $this->subject($this->subject)
-            ->view('mails.lockdown', [
+            ->view('process-manager::mails.lockdown', [
                 'msg' => $this->msg,
                 'details' => $this->details,
             ]);

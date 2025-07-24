@@ -40,10 +40,13 @@ class CommandLock
 
             if (self::isOutdatedLock($lockKey) && !self::notified($lockKey)) {
                 $msg = sprintf('Found old soft-lock on command %s', $lockKey);
-                Mail::to(config('integrator.notify_on_soft_lock'))->send(
-                    new LockdownMail($msg, [], config('app.name') . ' Microservice - soft lock detected')
-                );
                 self::storage()->put(self::getSoftLockNotificationFilename($lockKey), Carbon::now());
+
+                if (!empty(config('process-manager.notify_on_soft_lock'))) {
+                    Mail::to(config('process-manager.notify_on_soft_lock'))->send(
+                        new LockdownMail($msg, [], config('app.name') . ' Microservice - soft lock detected')
+                    );
+                }
             }
 
             dd(sprintf('Command %s locked', $lockKey)); // exit without exception :)
@@ -61,7 +64,7 @@ class CommandLock
     {
         $lockDate = Carbon::make(self::storage()->get(self::getSoftLockFilename($lockKey)));
 
-        return Carbon::now()->isAfter($lockDate->addSeconds(30));
+        return Carbon::now()->isAfter($lockDate->addSeconds(config('process-manager.softlock_time')));
     }
 
     public static function lock(string $lockKey): void

@@ -70,14 +70,19 @@ class ProcessesRepository implements Contract
             ->exists();
     }
 
-    public function nextAvailableProcess(): ?Process
+    public function nextAvailableProcess(bool $forceRetry = false, bool $allowFix = false): ?Process
     {
-        $process = Process::whereIn('status', [ProcessStatus::PENDING, ProcessStatus::RETRY])
+        $statuses = [ProcessStatus::PENDING, ProcessStatus::RETRY];
+        if($allowFix) {
+            $statuses[] = ProcessStatus::ERROR;
+            $statuses[] = ProcessStatus::EXCEPTION;
+        }
+        $process = Process::whereIn('status', $statuses)
             ->orderBy('id')
             ->first();
 
         if (!$process
-            || (ProcessStatus::RETRY === $process->status && Carbon::now()->isBefore($process->retry_after))
+            || (ProcessStatus::RETRY === $process->status && Carbon::now()->isBefore($process->retry_after) && !$forceRetry)
         ) {
             return null;
         }

@@ -25,7 +25,7 @@ class ProcessManager implements Contracts\ProcessManager
     protected const int RETRY_AFTER = 60; // in seconds
 
     protected ?string $nextStep = null;
-    private Contracts\Process $process;
+    private Contracts\Process|Contracts\ProcessSteps $process;
 
     public function __construct(
         protected readonly Process $model,
@@ -103,7 +103,11 @@ class ProcessManager implements Contracts\ProcessManager
         } else {
             $this->finishProcess($status);
 
-            Mail::to(config('integrator.notify_on_lockdown'))
+            if(empty(config('process-manager.notify_on_lockdown'))) {
+                return;
+            }
+
+            Mail::to(config('process-manager.notify_on_lockdown'))
                 ->send(
                     new Lockdown(
                         $e->getMessage(),
@@ -127,6 +131,8 @@ class ProcessManager implements Contracts\ProcessManager
             }
 
             logger()->info('Process | processing process ' . $this->model->id . ' step ' . $step);
+
+            $this->process->beforeNextStep();
 
             if (method_exists($this->process, $handler)) {
                 $result = $this->process->{$handler}();

@@ -6,8 +6,8 @@ namespace Movecloser\ProcessManager\Console\Commands;
 
 use Carbon\Carbon;
 use Illuminate\Console\Command;
-use Movecloser\ProcessManager\Exceptions\ProcessManagerException;
 use Movecloser\ProcessManager\Contracts\ProcessesRepository;
+use Movecloser\ProcessManager\Exceptions\ProcessManagerException;
 use Movecloser\ProcessManager\Lockdown\CommandLock;
 use Movecloser\ProcessManager\ProcessManagerFactory;
 use Throwable;
@@ -20,7 +20,7 @@ class ProcessManager extends Command
     private const int WORKER_LIFETIME = 5; // in minutes
 
     protected $description = 'Handling of new processes ';
-    protected $signature = 'process-manager:work {--remove-lock}';
+    protected $signature = 'process-manager:work {--retry} {--fix} {--remove-lock}';
 
     private ProcessesRepository $processes;
 
@@ -88,14 +88,14 @@ class ProcessManager extends Command
 
     private function startNextProcess(): int
     {
-        $process = $this->processes->nextAvailableProcess();
+        $process = $this->processes->nextAvailableProcess($this->option('retry'), $this->option('fix'));
 
         if (!$process) {
             return self::INVALID;
         }
 
         try {
-            if ($this->processes->isFatalErrorInProcesses($process->id)) {
+            if ($this->processes->isFatalErrorInProcesses($process->id) && !$this->option('fix')) {
                 throw new ProcessManagerException('Fatal error in processes, fix it first!');
             }
 
@@ -104,6 +104,9 @@ class ProcessManager extends Command
             $manager->handle();
         } catch (Throwable $e) {
             $this->error($e->getMessage());
+            if (method_exists($e, 'getDetails')) {
+                $this->error(json_encode($e->getDetails(), JSON_PRETTY_PRINT));
+            }
 
             return self::FAILURE;
         }
