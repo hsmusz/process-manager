@@ -44,8 +44,6 @@ class ProcessManagerServiceProvider extends ServiceProvider
             ]);
         }
 
-        $this->app->bind(ProcessesRepository::class, Repositories\ProcessesRepository::class);
-
         Nova::dashboards([
             new Main(),
         ]);
@@ -64,6 +62,8 @@ class ProcessManagerServiceProvider extends ServiceProvider
         // Merge package configuration
         $this->mergeConfigFrom(__DIR__ . '/../config/process-manager.php', 'process-manager');
         $this->mergeConfigFrom(__DIR__ . '/../config/nova.php', 'nova');
+
+        $this->app->bind(ProcessesRepository::class, Repositories\ProcessesRepository::class);
 
         $this->app->singleton(\Movecloser\ProcessManager\Contracts\ProcessLogger::class, ProcessLogger::class);
     }
