@@ -8,9 +8,15 @@ use Movecloser\ProcessManager\Lockdown\CommandLock;
 
 trait LockHelper
 {
-    public static function lockKey(?string $param = null): string
+    public static function lockKey(?string $param = null): ?string
     {
-        return static::COMMAND_LOCK_KEY . (!empty($param) ? ('-' . $param) : '');
+        try {
+            $key = static::COMMAND_LOCK_KEY;
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return $key . (!empty($param) ? ('-' . $param) : '');
     }
 
     /**
