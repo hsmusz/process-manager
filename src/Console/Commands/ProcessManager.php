@@ -10,11 +10,14 @@ use Movecloser\ProcessManager\Contracts\ProcessesRepository;
 use Movecloser\ProcessManager\Exceptions\ProcessManagerException;
 use Movecloser\ProcessManager\Lockdown\CommandLock;
 use Movecloser\ProcessManager\ProcessManagerFactory;
+use Movecloser\ProcessManager\Support\LockHelper;
 use Throwable;
 
 class ProcessManager extends Command
 {
-    public const string COMMAND_LOCK_KEY = 'process-manager';
+    use LockHelper;
+
+    protected const ?string COMMAND_LOCK_KEY = 'process-manager';
 
     private const int DAILY_COOLDOWN = 10; // stop processing after END OF DAY minus 10 minutes
     private const int WORKER_LIFETIME = 5; // in minutes
@@ -32,10 +35,10 @@ class ProcessManager extends Command
     public function handle(ProcessesRepository $processes): int
     {
         if ($this->option('remove-lock')) {
-            CommandLock::removeLock(self::COMMAND_LOCK_KEY);
+            CommandLock::removeLock(self::lockKey());
         }
 
-        if (CommandLock::commandDisabled(self::COMMAND_LOCK_KEY)) {
+        if (CommandLock::commandDisabled(self::lockKey())) {
             $this->info('Command disabled');
 
             return self::INVALID;
@@ -46,11 +49,11 @@ class ProcessManager extends Command
         if ($this->processes->hasTimeoutProcess()) {
             $this->alert('PROCESS TIMEOUT DETECTED - MARKING PROCESS FOR RETRY.');
             $this->processes->restartTimoutProcess();
-            CommandLock::removeLock(self::COMMAND_LOCK_KEY);
+            CommandLock::removeLock(self::lockKey());
         }
 
         // use simplified lock, to disable overlapping process workers
-        if (CommandLock::isLocked(self::COMMAND_LOCK_KEY)) {
+        if (CommandLock::isLocked(self::lockKey())) {
             $this->info('Locked - other process worker is running.');
 
             return self::SUCCESS;
@@ -62,7 +65,7 @@ class ProcessManager extends Command
             return self::FAILURE;
         }
 
-        CommandLock::lock(self::COMMAND_LOCK_KEY);
+        CommandLock::lock(self::lockKey());
 
         $lifetime = Carbon::now()->addMinutes(self::WORKER_LIFETIME)->endOfMinute()->subSeconds(30);
         while (Carbon::now()->lt($lifetime)) {
@@ -79,7 +82,7 @@ class ProcessManager extends Command
             sleep(1);
         }
 
-        CommandLock::removeLock(self::COMMAND_LOCK_KEY);
+        CommandLock::removeLock(self::lockKey());
 
         $this->info('Finished.');
 

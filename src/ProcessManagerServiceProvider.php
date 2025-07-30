@@ -44,10 +44,6 @@ class ProcessManagerServiceProvider extends ServiceProvider
             ]);
         }
 
-        Nova::dashboards([
-            new Main(),
-        ]);
-
         Nova::resources([
             Process::class,
             ProcessStep::class,

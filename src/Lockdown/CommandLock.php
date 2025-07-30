@@ -60,6 +60,11 @@ class CommandLock
         return self::storage()->exists(self::getSoftLockFilename($lockKey));
     }
 
+    public static function hasError(string $lockKey): bool
+    {
+        return self::storage()->exists(self::getErrorLockFilename($lockKey));
+    }
+
     public static function isOutdatedLock(string $lockKey): bool
     {
         $lockDate = Carbon::make(self::storage()->get(self::getSoftLockFilename($lockKey)));
@@ -72,6 +77,11 @@ class CommandLock
         self::storage()->put(self::getSoftLockFilename($lockKey), Carbon::now());
     }
 
+    public static function error(string $lockKey, string $msg): void
+    {
+        self::storage()->put(self::getErrorLockFilename($lockKey), Carbon::now() . ' ' . $msg);
+    }
+
     public static function notified(string $lockKey): bool
     {
         return self::storage()->exists(self::getSoftLockNotificationFilename($lockKey));
@@ -79,6 +89,7 @@ class CommandLock
 
     public static function removeLock(string $lockKey): void
     {
+        self::storage()->delete(self::getErrorLockFilename($lockKey));
         self::storage()->delete(self::getSoftLockFilename($lockKey));
         self::storage()->delete(self::getSoftLockNotificationFilename($lockKey));
     }
@@ -86,6 +97,11 @@ class CommandLock
     private static function getSoftLockFilename(string $lockKey): string
     {
         return Str::kebab($lockKey) . '.lock';
+    }
+
+    private static function getErrorLockFilename(string $lockKey): string
+    {
+        return Str::kebab($lockKey) . '.error';
     }
 
     private static function getSoftLockNotificationFilename(string $lockKey): string
