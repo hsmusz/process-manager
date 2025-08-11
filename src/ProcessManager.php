@@ -61,9 +61,9 @@ class ProcessManager implements Contracts\ProcessManager
             } else {
                 try {
                     $this->handleException($e);
-                    $this->log('Process | error in process ' . $this->model->id);
+                    $this->log('Process | error in process ' . $this->model->id, $e);
                 } catch (Throwable $e) {
-                    $this->log('Process | unable to handle exception in process ' . $this->model->id . ': ' . $e->getMessage());
+                    $this->log('Process | unable to handle exception in process ' . $this->model->id . ': ' . $e->getMessage(), $e);
 
                     // failsafe for any unhandled exceptions
                     $this->model->status = ProcessStatus::EXCEPTION;
@@ -221,10 +221,14 @@ class ProcessManager implements Contracts\ProcessManager
         return $this->process->next($processStep->step);
     }
 
-    private function log(string $msg): void
+    private function log(string $msg, ?Throwable $e = null): void
     {
         // todo: validate channel is configured
         logger()->channel('process-manager')->info($msg);
+        if ($e) {
+            logger()->channel('process-manager')->error($e->getMessage());
+            logger()->channel('process-manager')->error($e->getTraceAsString());
+        }
     }
 
     /**
