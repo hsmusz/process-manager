@@ -56,6 +56,7 @@ class ProcessManager implements Contracts\ProcessManager
         } catch (Throwable $e) {
             // allow for processes to be skipped if logic allows that
             if ($e instanceof ProcessEndedException) {
+                $this->persistStep($e->getStep(), ProcessStatus::INFO, $e->getMessage(), $e->getDetails());
                 $this->finishProcess(ProcessStatus::SKIPPED);
             } else {
                 try {
