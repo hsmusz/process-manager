@@ -23,7 +23,12 @@ class ProcessManager extends Command
     private const int WORKER_LIFETIME = 5; // in minutes
 
     protected $description = 'Handling of new processes ';
-    protected $signature = 'process-manager:work {processId?} {--single} {--retry} {--fix} {--remove-lock}';
+    protected $signature = 'process-manager:work 
+                                {processId? : (optional) Run any process that is NOT finished - do not check for error/retry timeout} 
+                                {--single : Run only one process} 
+                                {--retry : Allow running process with retry before the retry timeout} 
+                                {--fix : Allow running process marked as error}  
+                                {--remove-lock : Make process manager disregard any previous lock} ';
 
     private ProcessesRepository $processes;
 
@@ -95,11 +100,14 @@ class ProcessManager extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * @throws \Movecloser\ProcessManager\Exceptions\ProcessManagerException
+     */
     private function startNextProcess(): int
     {
         if ($this->argument('processId')) {
             $process = $this->processes->find(intval($this->argument('processId')));
-            if($process->hasFinished()) {
+            if ($process->hasFinished()) {
                 throw new ProcessManagerException('Process has already finished');
             }
         } else {
