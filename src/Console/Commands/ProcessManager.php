@@ -23,7 +23,7 @@ class ProcessManager extends Command
     private const int WORKER_LIFETIME = 5; // in minutes
 
     protected $description = 'Handling of new processes ';
-    protected $signature = 'process-manager:work {--single} {--retry} {--fix} {--remove-lock}';
+    protected $signature = 'process-manager:work {processId?} {--single} {--retry} {--fix} {--remove-lock}';
 
     private ProcessesRepository $processes;
 
@@ -65,7 +65,7 @@ class ProcessManager extends Command
             return self::FAILURE;
         }
 
-        $singleProcess = (bool) $this->option('single');
+        $singleProcess = $this->option('single') || !empty($this->argument('processId'));
 
         CommandLock::lock(self::lockKey());
 
@@ -97,7 +97,14 @@ class ProcessManager extends Command
 
     private function startNextProcess(): int
     {
-        $process = $this->processes->nextAvailableProcess($this->option('retry'), $this->option('fix'));
+        if ($this->argument('processId')) {
+            $process = $this->processes->find(intval($this->argument('processId')));
+            if($process->hasFinished()) {
+                throw new ProcessManagerException('Process has already finished');
+            }
+        } else {
+            $process = $this->processes->nextAvailableProcess($this->option('retry'), $this->option('fix'));
+        }
 
         if (!$process) {
             return self::INVALID;

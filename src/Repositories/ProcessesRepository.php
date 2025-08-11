@@ -90,6 +90,11 @@ class ProcessesRepository implements Contract
         return $process;
     }
 
+    public function find(int $id): Process
+    {
+        return Process::findOrFail($id);
+    }
+
     public function restartTimoutProcess(): void
     {
         $process = Process::where('status', ProcessStatus::IN_PROGRESS)->firstOrFail();
