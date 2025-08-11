@@ -111,6 +111,7 @@ class CommandLock
 
     private static function storage(): Filesystem
     {
+        // todo: make configurable | validate default disk is configured
         return Storage::disk('locks');
     }
 }

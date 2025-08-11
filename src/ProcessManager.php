@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Mail;
 use Movecloser\ProcessManager\Contracts\ProcessesRepository;
 use Movecloser\ProcessManager\Contracts\ProcessTask;
 use Movecloser\ProcessManager\Enum\ProcessStatus;
+use Movecloser\ProcessManager\Exceptions\ProcessEndedException;
 use Movecloser\ProcessManager\Exceptions\ProcessException;
 use Movecloser\ProcessManager\Facades\ProcessLogger;
 use Movecloser\ProcessManager\Lockdown\Mail\Lockdown;
@@ -47,27 +48,32 @@ class ProcessManager implements Contracts\ProcessManager
      */
     public function handle(): void
     {
-        logger()->info('Process | handling process ' . $this->model->id);
+        $this->log('Process | handling process ' . $this->model->id);
 
         try {
             $this->restoreProcess();
             $this->processLoop();
         } catch (Throwable $e) {
-            try {
-                $this->handleException($e);
-                logger()->info('Process | error in process ' . $this->model->id);
-            } catch (Throwable $e) {
-                logger()->info('Process | unable to handle exception in process ' . $this->model->id . ': ' . $e->getMessage());
+            // allow for processes to be skipped if logic allows that
+            if ($e instanceof ProcessEndedException) {
+                $this->finishProcess(ProcessStatus::SKIPPED);
+            } else {
+                try {
+                    $this->handleException($e);
+                    $this->log('Process | error in process ' . $this->model->id);
+                } catch (Throwable $e) {
+                    $this->log('Process | unable to handle exception in process ' . $this->model->id . ': ' . $e->getMessage());
 
-                // failsafe for any unhandled exceptions
-                $this->model->status = ProcessStatus::EXCEPTION;
-                $this->model->save();
+                    // failsafe for any unhandled exceptions
+                    $this->model->status = ProcessStatus::EXCEPTION;
+                    $this->model->save();
+                }
+
+                throw $e;
             }
-
-            throw $e;
         }
 
-        logger()->info('Process | finished process ' . $this->model->id);
+        $this->log('Process | finished process ' . $this->model->id . ':' . $this->model->status->value);
     }
 
     /**
@@ -123,7 +129,6 @@ class ProcessManager implements Contracts\ProcessManager
      */
     protected function processLoop(): void
     {
-
         $this->process->boot();
 
         foreach ($this->process->getSteps() as $step => $handler) {
@@ -131,7 +136,7 @@ class ProcessManager implements Contracts\ProcessManager
                 continue;
             }
 
-            logger()->info('Process | processing process ' . $this->model->id . ' step ' . $step);
+            $this->log('Process | processing process ' . $this->model->id . ' step ' . $step);
 
             $this->process->beforeNextStep();
 
@@ -213,6 +218,12 @@ class ProcessManager implements Contracts\ProcessManager
         }
 
         return $this->process->next($processStep->step);
+    }
+
+    private function log(string $msg): void
+    {
+        // todo: validate channel is configured
+        logger()->channel('process-manager')->info($msg);
     }
 
     /**

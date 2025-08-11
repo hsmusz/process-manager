@@ -15,4 +15,5 @@ enum ProcessStatus: string
     case IN_PROGRESS = 'IN_PROGRESS';
     case RETRY = 'RETRY';
     case EXCEPTION = 'EXCEPTION';
+    case SKIPPED = 'SKIPPED';
 }

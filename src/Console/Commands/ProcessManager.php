@@ -23,7 +23,7 @@ class ProcessManager extends Command
     private const int WORKER_LIFETIME = 5; // in minutes
 
     protected $description = 'Handling of new processes ';
-    protected $signature = 'process-manager:work {--retry} {--fix} {--remove-lock}';
+    protected $signature = 'process-manager:work {--single} {--retry} {--fix} {--remove-lock}';
 
     private ProcessesRepository $processes;
 
@@ -65,6 +65,8 @@ class ProcessManager extends Command
             return self::FAILURE;
         }
 
+        $singleProcess = (bool) $this->option('single');
+
         CommandLock::lock(self::lockKey());
 
         $lifetime = Carbon::now()->addMinutes(self::WORKER_LIFETIME)->endOfMinute()->subSeconds(30);
@@ -75,6 +77,10 @@ class ProcessManager extends Command
             }
 
             $status = $this->startNextProcess();
+            if ($singleProcess) {
+                break;
+            }
+
             if (self::SUCCESS !== $status) {
                 break;
             }
