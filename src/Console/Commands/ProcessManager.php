@@ -39,14 +39,14 @@ class ProcessManager extends Command
      */
     public function handle(ProcessesRepository $processes): int
     {
-        if ($this->option('remove-lock')) {
-            CommandLock::removeLock(self::lockKey());
-        }
-
         if (CommandLock::commandDisabled(self::lockKey())) {
             $this->info('Command disabled');
 
             return self::INVALID;
+        }
+
+        if ($this->option('remove-lock')) {
+            CommandLock::removeLock(self::lockKey());
         }
 
         $this->processes = $processes;

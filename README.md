@@ -1,4 +1,4 @@
-Laravel component to handle processses in microwervices
+# Laravel component to handle processes in microservice.
 
 ```php 
   # config/filesystems.php
@@ -19,7 +19,7 @@ Laravel component to handle processses in microwervices
     'process-manager' => [
         'driver' => 'single',
         'path' => storage_path('logs/process-manager.log'),
-        'level' => env('LOG_LEVEL', 'debug'),
+        'level' => 'debug',
         'replace_placeholders' => true,
     ],
   ],
