@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager;
 
+use Closure;
 use InvalidArgumentException;
 use Movecloser\ProcessManager\Contracts\ProcessesRepository;
 use Movecloser\ProcessManager\Contracts\ProcessManager;
@@ -12,7 +13,19 @@ use ReflectionClass;
 
 class ProcessManagerFactory
 {
+    protected static array $extraColumns = [];
     protected static array $processes = [];
+    protected static ?Closure $userResolver = null;
+
+    public static function addExtraColumns(array $extraColumns): void
+    {
+        static::$extraColumns = $extraColumns;
+    }
+
+    public static function extraColumns(): array
+    {
+        return static::$extraColumns;
+    }
 
     /**
      * @throws \Illuminate\Contracts\Container\BindingResolutionException
@@ -59,5 +72,19 @@ class ProcessManagerFactory
         }
 
         static::$processes = array_merge(static::$processes, $processes);
+    }
+
+    public static function resolveUser(int|string $id)
+    {
+        if (is_null(static::$userResolver)) {
+            return 'user id:' . $id;
+        }
+
+        return (static::$userResolver)($id);
+    }
+
+    public static function setUserResolver(callable $resolver): void
+    {
+        static::$userResolver = $resolver;
     }
 }

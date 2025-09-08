@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager\Nova\Resources;
 
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Fields\Badge;
 use Laravel\Nova\Fields\Code;
@@ -75,6 +78,8 @@ class Process extends Resource
                 ->readonly()
                 ->copyable(),
 
+            ...$this->extraColumns(),
+
             Badge::make('status')->map([
                 ProcessStatus::PENDING->value => 'info',
                 ProcessStatus::IN_PROGRESS->value => 'info',
@@ -104,6 +109,15 @@ class Process extends Resource
 
             DateTime::make('Retry after', Model::RETRY_AFTER)
                 ->displayUsing(fn($date) => $date?->toDateTimeString())
+                ->hideFromIndex(),
+
+            Text::make('Aborted by', 'meta')
+                ->displayUsing(fn() => sprintf(
+                    '%s, %s',
+                    ProcessManagerFactory::resolveUser($this->meta['aborted']['user']),
+                    Carbon::parse($this->meta['aborted']['timestamp'])->setTimezone(config('app.timezone'))->toDateTimeString()
+                ))
+                ->canSee(fn() => !empty($this->meta['aborted'] ?? []))
                 ->hideFromIndex(),
 
             Text::make('ERROR', 'meta')
@@ -154,6 +168,16 @@ class Process extends Resource
         }
 
         return parent::menu($request)->withBadge((string) $counts->sum(), $type);
+    }
+
+    public function extraColumns(): array
+    {
+        $columns = [];
+        foreach (ProcessManagerFactory::extraColumns() as $columnLabel => $key) {
+            $columns[] = Text::make($columnLabel, fn() => Arr::get($this->meta, 'display.' . $key))->readonly()->copyable();
+        }
+
+        return $columns;
     }
 
 }

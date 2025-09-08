@@ -12,8 +12,6 @@ class RestartProcess extends Command
     protected $description = 'Restart Process (change status only)';
     protected $signature = 'process-manager:restart-process {processId} {--force}';
 
-    private ProcessesRepository $processes;
-
     /**
      * Execute the console command.
      *

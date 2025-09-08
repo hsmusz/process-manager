@@ -21,6 +21,8 @@ return new class extends Migration {
             $table->unsignedInteger('attempts')->default(0);
             $table->dateTimeTz('retry_after')->nullable();
             $table->timestampsTz();
+
+            $table->index(['process', 'processable_type', 'processable_id']);
         });
 
         Schema::create('process_steps', function (Blueprint $table) {
