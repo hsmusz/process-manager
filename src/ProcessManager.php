@@ -35,14 +35,6 @@ class ProcessManager implements Contracts\ProcessManager
     }
 
     /**
-     * @throws Exception
-     */
-    public function finishProcess(ProcessStatus $status): void
-    {
-        $this->setStatus($status);
-    }
-
-    /**
      * @throws \Throwable
      */
     public function handle(): void
@@ -57,7 +49,7 @@ class ProcessManager implements Contracts\ProcessManager
             // allow for processes to be skipped if logic allows that
             if ($e instanceof ProcessEndedException) {
                 $this->persistStep($e->getStep(), ProcessStatus::INFO, $e->getMessage(), $e->getDetails());
-                $this->finishProcess(ProcessStatus::SKIPPED);
+                $this->setStatus(ProcessStatus::SKIPPED);
             } else {
                 try {
                     $this->handleException($e);
@@ -66,7 +58,7 @@ class ProcessManager implements Contracts\ProcessManager
                     $this->log('Process | unable to handle exception in process ' . $this->model->id . ': ' . $e->getMessage(), $e);
 
                     // failsafe for any unhandled exceptions
-                    $this->setStatus(ProcessStatus::EXCEPTION);;
+                    $this->setStatus(ProcessStatus::EXCEPTION);
                 }
 
                 throw $e;
@@ -102,12 +94,12 @@ class ProcessManager implements Contracts\ProcessManager
         $this->persistStep($this->nextStep, $status, $e->getMessage(), $details);
 
         if ($retry) {
-            $this->finishProcess(ProcessStatus::RETRY);
+            $this->setStatus(ProcessStatus::RETRY);
             $multiply = max($this->model->attempts - 3, 1);
             $this->model->retry_after = Carbon::now()->addSeconds(self::RETRY_AFTER * $multiply);
             $this->model->save();
         } else {
-            $this->finishProcess($status);
+            $this->setStatus($status);
 
             if (empty(config('process-manager.notify_on_lockdown'))) {
                 return;
@@ -161,7 +153,7 @@ class ProcessManager implements Contracts\ProcessManager
             $this->prepareNextStep($step);
         }
 
-        $this->finishProcess(ProcessStatus::SUCCESS);
+        $this->setStatus(ProcessStatus::SUCCESS);
     }
 
     /**
