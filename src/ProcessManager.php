@@ -39,8 +39,7 @@ class ProcessManager implements Contracts\ProcessManager
      */
     public function finishProcess(ProcessStatus $status): void
     {
-        $this->model->status = $status;
-        $this->model->save();
+        $this->setStatus($status);
     }
 
     /**
@@ -48,6 +47,7 @@ class ProcessManager implements Contracts\ProcessManager
      */
     public function handle(): void
     {
+        $this->setStatus(ProcessStatus::IN_PROGRESS);
         $this->log('Process | handling process ' . $this->model->id);
 
         try {
@@ -66,8 +66,7 @@ class ProcessManager implements Contracts\ProcessManager
                     $this->log('Process | unable to handle exception in process ' . $this->model->id . ': ' . $e->getMessage(), $e);
 
                     // failsafe for any unhandled exceptions
-                    $this->model->status = ProcessStatus::EXCEPTION;
-                    $this->model->save();
+                    $this->setStatus(ProcessStatus::EXCEPTION);;
                 }
 
                 throw $e;
@@ -259,5 +258,11 @@ class ProcessManager implements Contracts\ProcessManager
     private function prepareNextStep(string $currentStep): void
     {
         $this->nextStep = $this->process->next($currentStep);
+    }
+
+    private function setStatus(ProcessStatus $status): void
+    {
+        $this->model->status = $status;
+        $this->model->save();
     }
 }
