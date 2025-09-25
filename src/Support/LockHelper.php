@@ -4,38 +4,63 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager\Support;
 
+use Illuminate\Support\Str;
 use Movecloser\ProcessManager\Lockdown\CommandLock;
+use Throwable;
 
 trait LockHelper
 {
-    public static function lockKey(?string $param = null): ?string
-    {
-        try {
-            $key = static::COMMAND_LOCK_KEY;
-        } catch (\Throwable $e) {
-            return null;
-        }
-
-        return $key . (!empty($param) ? ('-' . $param) : '');
-    }
+    private ?string $lockKey;
 
     /**
      * @throws \Exception
      */
     protected function bootLock(): void
     {
+        if ($this->shouldForceRemoveLock()) {
+            CommandLock::removeLock($this->getLockKey());
+        }
+
+        if ($this->shouldUseLock()) {
+            CommandLock::delayAndLock($this->getLockKey());
+        }
+    }
+
+    protected function commandDisabled(): bool
+    {
+        return !$this->option('bypass-lock') && CommandLock::commandDisabled($this->getLockKey());
+    }
+
+    protected function removeCommandLock(): void
+    {
+        CommandLock::removeLock($this->getLockKey());
+    }
+
+    private function getLockKey(): string
+    {
+        if (!empty($this->lockKey)) {
+            return $this->lockKey;
+        }
+
         $param = null;
         if (method_exists($this, 'lockKeyArgument') && !empty($this->lockKeyArgument())) {
             $param = $this->argument($this->lockKeyArgument());
         }
 
-        if ($this->shouldForceRemoveLock()) {
-            CommandLock::removeLock(static::lockKey($param));
+        $this->lockKey = $this->lockKey($param);
+
+        return $this->lockKey;
+    }
+
+    private function lockKey(?string $param = null): string
+    {
+        try {
+            $key = static::COMMAND_LOCK_KEY;
+        } catch (Throwable $e) {
+            $key = Str::kebab(static::class);
         }
 
-        if ($this->shouldUseLock()) {
-            CommandLock::delayAndLock(static::lockKey($param));
-        }
+        return $key . (!empty($param) ? ('-' . $param) : '');
     }
 
     private function shouldForceRemoveLock(): bool

@@ -39,14 +39,14 @@ class ProcessManager extends Command
      */
     public function handle(ProcessesRepository $processes): int
     {
-        if (CommandLock::commandDisabled(self::lockKey())) {
+        if (CommandLock::commandDisabled($this->getLockKey())) {
             $this->info('Command disabled');
 
             return self::INVALID;
         }
 
         if ($this->option('remove-lock')) {
-            CommandLock::removeLock(self::lockKey());
+            $this->removeCommandLock();
         }
 
         $this->processes = $processes;
@@ -54,11 +54,11 @@ class ProcessManager extends Command
         if ($this->processes->hasTimeoutProcess()) {
             $this->alert('PROCESS TIMEOUT DETECTED - MARKING PROCESS FOR RETRY.');
             $this->processes->restartTimoutProcess();
-            CommandLock::removeLock(self::lockKey());
+            $this->removeCommandLock();
         }
 
         // use simplified lock, to disable overlapping process workers
-        if (CommandLock::isLocked(self::lockKey())) {
+        if (CommandLock::isLocked($this->getLockKey())) {
             $this->info('Locked - other process worker is running.');
 
             return self::SUCCESS;
@@ -72,7 +72,7 @@ class ProcessManager extends Command
 
         $singleProcess = $this->option('single') || !empty($this->argument('processId'));
 
-        CommandLock::lock(self::lockKey());
+        CommandLock::lock($this->getLockKey());
 
         $lifetime = Carbon::now()->addMinutes(self::WORKER_LIFETIME)->endOfMinute()->subSeconds(30);
         while (Carbon::now()->lt($lifetime)) {
@@ -93,7 +93,7 @@ class ProcessManager extends Command
             sleep(1);
         }
 
-        CommandLock::removeLock(self::lockKey());
+        $this->removeCommandLock();
 
         $this->info('Finished.');
 
@@ -108,7 +108,9 @@ class ProcessManager extends Command
         if ($this->argument('processId')) {
             $process = $this->processes->find(intval($this->argument('processId')));
             if ($process->hasFinished()) {
-                throw new ProcessManagerException('Process has already finished');
+                $this->error('Process has already finished');
+
+                return self::INVALID;
             }
         } else {
             $process = $this->processes->nextAvailableProcess($this->option('retry'), $this->option('fix'));
