@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager\Support;
 
-use Illuminate\Support\Str;
 use Movecloser\ProcessManager\Lockdown\CommandLock;
 use Throwable;
 
@@ -28,12 +27,11 @@ trait LockHelper
 
     protected function commandDisabled(): bool
     {
-        return !$this->option('bypass-lock') && CommandLock::commandDisabled($this->getLockKey());
-    }
+        if (empty($this->getLockKey()) || $this->option('skip-lock')) {
+            return false;
+        }
 
-    protected function removeCommandLock(): void
-    {
-        CommandLock::removeLock($this->getLockKey());
+        return CommandLock::commandDisabled($this->getLockKey());
     }
 
     protected function getLockKey(): string
@@ -50,6 +48,13 @@ trait LockHelper
         $this->lockKey = $this->lockKey($param);
 
         return $this->lockKey;
+    }
+
+    protected function removeCommandLock(): void
+    {
+        if ($this->getLockKey()) {
+            CommandLock::removeLock($this->getLockKey());
+        }
     }
 
     private function lockKey(?string $param = null): ?string
@@ -71,7 +76,7 @@ trait LockHelper
     private function shouldUseLock(): bool
     {
         $useLock = true;
-        if (app()->isLocal() && $this->option('skip-lock')) {
+        if ($this->option('skip-lock')) {
             $useLock = false;
         }
 

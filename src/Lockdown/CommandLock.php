@@ -21,7 +21,7 @@ class CommandLock
 
     public static function commandDisabled(string $lockKey): bool
     {
-        return self::storage()->exists($lockKey . '.disabled') || self::allCommandsDisabled();
+        return self::allCommandsDisabled() || self::storage()->exists($lockKey . '.disabled');
     }
 
     /**
