@@ -33,6 +33,7 @@ trait LockHelper
 
         if ($this->shouldUseLock()) {
             CommandLock::delayAndLock($this->getLockKey());
+            CommandLock::removeError($this->getLockKey());
         }
     }
 

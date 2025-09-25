@@ -65,6 +65,11 @@ class CommandLock
         return self::storage()->exists(self::getErrorLockFilename($lockKey));
     }
 
+    public static function removeError(string $lockKey): void
+    {
+        self::storage()->delete(self::getErrorLockFilename($lockKey));
+    }
+
     public static function getError(string $lockKey): ?string
     {
         return self::storage()->get(self::getErrorLockFilename($lockKey));
@@ -94,7 +99,6 @@ class CommandLock
 
     public static function removeLock(string $lockKey): void
     {
-        self::storage()->delete(self::getErrorLockFilename($lockKey));
         self::storage()->delete(self::getSoftLockFilename($lockKey));
         self::storage()->delete(self::getSoftLockNotificationFilename($lockKey));
     }
