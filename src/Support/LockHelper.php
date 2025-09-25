@@ -36,9 +36,9 @@ trait LockHelper
         CommandLock::removeLock($this->getLockKey());
     }
 
-    private function getLockKey(): string
+    protected function getLockKey(): string
     {
-        if (!empty($this->lockKey)) {
+        if (isset($this->lockKey)) {
             return $this->lockKey;
         }
 
@@ -52,12 +52,12 @@ trait LockHelper
         return $this->lockKey;
     }
 
-    private function lockKey(?string $param = null): string
+    private function lockKey(?string $param = null): ?string
     {
         try {
             $key = static::COMMAND_LOCK_KEY;
         } catch (Throwable $e) {
-            $key = Str::kebab(static::class);
+            return null;
         }
 
         return $key . (!empty($param) ? ('-' . $param) : '');
