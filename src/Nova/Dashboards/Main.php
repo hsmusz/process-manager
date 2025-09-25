@@ -30,7 +30,7 @@ class Main extends Dashboard
 
     protected function commands(): array
     {
-        if(empty(static::COMMANDS)) {
+        if (empty(static::COMMANDS)) {
             return [];
         }
 
@@ -67,10 +67,16 @@ class Main extends Dashboard
             CommandsStatus::COMMAND_STATUS_LOCKED => ['exclamation', 'red'],
             CommandsStatus::COMMAND_STATUS_ERROR => ['exclamation-circle', 'red'],
         };
+
+        $error = CommandsStatus::getError($command, $param);
+        if (!empty($error)) {
+            $error = sprintf(' (%s)', $error);
+        }
+
         $card->addItem(
             icon: $meta[0],
             title: $title . (!empty($param) ? ' (' . $param . ')' : ''),
-            content: sprintf('<strong style="color: %s;">%s</strong>', $meta[1], $status)
+            content: sprintf('<strong style="color: %s;">%s</strong>%s', $meta[1], $status, $error)
         );
     }
 }

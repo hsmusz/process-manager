@@ -42,6 +42,13 @@ class CommandsStatus extends Command
         return self::COMMAND_STATUS_IDLE;
     }
 
+    public static function getError(string $class, ?string $param = null): ?string
+    {
+        $lockKey = $class::lockKey($param);
+
+        return CommandLock::getError($lockKey);
+    }
+
     /**
      * @throws \Throwable
      */
