@@ -11,6 +11,17 @@ trait LockHelper
 {
     private ?string $lockKey;
 
+    public static function lockKey(?string $param = null): ?string
+    {
+        try {
+            $key = static::COMMAND_LOCK_KEY;
+        } catch (Throwable $e) {
+            return null;
+        }
+
+        return $key . (!empty($param) ? ('-' . $param) : '');
+    }
+
     /**
      * @throws \Exception
      */
@@ -45,7 +56,7 @@ trait LockHelper
             $param = $this->argument($this->lockKeyArgument());
         }
 
-        $this->lockKey = $this->lockKey($param);
+        $this->lockKey = static::lockKey($param);
 
         return $this->lockKey;
     }
@@ -55,17 +66,6 @@ trait LockHelper
         if ($this->getLockKey()) {
             CommandLock::removeLock($this->getLockKey());
         }
-    }
-
-    private function lockKey(?string $param = null): ?string
-    {
-        try {
-            $key = static::COMMAND_LOCK_KEY;
-        } catch (Throwable $e) {
-            return null;
-        }
-
-        return $key . (!empty($param) ? ('-' . $param) : '');
     }
 
     private function shouldForceRemoveLock(): bool

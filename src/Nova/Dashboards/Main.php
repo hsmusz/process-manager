@@ -60,6 +60,7 @@ class Main extends Dashboard
     private function addCard(WelcomeCard $card, string $command, string $title, ?string $param = null): void
     {
         $status = CommandsStatus::checkCommandStatus($command, $param);
+        $error = CommandLock::getError($command);
         $meta = match ($status) {
             CommandsStatus::COMMAND_STATUS_IDLE => ['shield-check', 'green'],
             CommandsStatus::COMMAND_STATUS_WORKING => ['cog', 'green'],

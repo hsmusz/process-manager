@@ -21,19 +21,21 @@ class CommandsStatus extends Command
 
     public static function checkCommandStatus(string $class, ?string $param = null): string
     {
-        if (CommandLock::hasError($class::lockKey($param))) {
+        $lockKey = $class::lockKey($param);
+
+        if (CommandLock::hasError($lockKey)) {
             return self::COMMAND_STATUS_ERROR;
         }
 
-        if (CommandLock::isLocked($class::lockKey($param))) {
-            if (CommandLock::isOutdatedLock($class::lockKey($param)) && CommandLock::notified($class::lockKey($param))) {
+        if (CommandLock::isLocked($lockKey)) {
+            if (CommandLock::isOutdatedLock($lockKey) && CommandLock::notified($lockKey)) {
                 return self::COMMAND_STATUS_LOCKED;
             } else {
                 return self::COMMAND_STATUS_WORKING;
             }
         }
 
-        if (CommandLock::commandDisabled($class::lockKey($param))) {
+        if (CommandLock::commandDisabled($lockKey)) {
             return self::COMMAND_STATUS_DISABLED;
         }
 
