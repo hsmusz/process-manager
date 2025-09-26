@@ -55,9 +55,16 @@ class CommandLock
         self::lock($lockKey);
     }
 
-    public static function isLocked(string $lockKey): bool
+    public static function error(?string $lockKey, string $msg): void
     {
-        return self::storage()->exists(self::getSoftLockFilename($lockKey));
+        if (!empty($lockKey) && self::isLocked($lockKey)) {
+            self::storage()->put(self::getErrorLockFilename($lockKey), Carbon::now() . ' ' . $msg);
+        }
+    }
+
+    public static function getError(string $lockKey): ?string
+    {
+        return self::storage()->get(self::getErrorLockFilename($lockKey));
     }
 
     public static function hasError(string $lockKey): bool
@@ -65,14 +72,9 @@ class CommandLock
         return self::storage()->exists(self::getErrorLockFilename($lockKey));
     }
 
-    public static function removeError(string $lockKey): void
+    public static function isLocked(string $lockKey): bool
     {
-        self::storage()->delete(self::getErrorLockFilename($lockKey));
-    }
-
-    public static function getError(string $lockKey): ?string
-    {
-        return self::storage()->get(self::getErrorLockFilename($lockKey));
+        return self::storage()->exists(self::getSoftLockFilename($lockKey));
     }
 
     public static function isOutdatedLock(string $lockKey): bool
@@ -87,14 +89,14 @@ class CommandLock
         self::storage()->put(self::getSoftLockFilename($lockKey), Carbon::now());
     }
 
-    public static function error(string $lockKey, string $msg): void
-    {
-        self::storage()->put(self::getErrorLockFilename($lockKey), Carbon::now() . ' ' . $msg);
-    }
-
     public static function notified(string $lockKey): bool
     {
         return self::storage()->exists(self::getSoftLockNotificationFilename($lockKey));
+    }
+
+    public static function removeError(string $lockKey): void
+    {
+        self::storage()->delete(self::getErrorLockFilename($lockKey));
     }
 
     public static function removeLock(string $lockKey): void
@@ -103,14 +105,14 @@ class CommandLock
         self::storage()->delete(self::getSoftLockNotificationFilename($lockKey));
     }
 
-    private static function getSoftLockFilename(string $lockKey): string
-    {
-        return Str::kebab($lockKey) . '.lock';
-    }
-
     private static function getErrorLockFilename(string $lockKey): string
     {
         return Str::kebab($lockKey) . '.error';
+    }
+
+    private static function getSoftLockFilename(string $lockKey): string
+    {
+        return Str::kebab($lockKey) . '.lock';
     }
 
     private static function getSoftLockNotificationFilename(string $lockKey): string

@@ -27,6 +27,10 @@ trait LockHelper
      */
     protected function bootLock(): void
     {
+        if(empty($this->getLockKey())) {
+            return;
+        }
+
         if ($this->shouldForceRemoveLock()) {
             CommandLock::removeLock($this->getLockKey());
         }
@@ -46,7 +50,7 @@ trait LockHelper
         return CommandLock::commandDisabled($this->getLockKey());
     }
 
-    protected function getLockKey(): string
+    protected function getLockKey(): ?string
     {
         if (isset($this->lockKey)) {
             return $this->lockKey;
