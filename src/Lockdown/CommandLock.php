@@ -14,6 +14,8 @@ use Movecloser\ProcessManager\Lockdown\Mail\Lockdown as LockdownMail;
 
 class CommandLock
 {
+    private const int KEEP_LAST_N_LINES = 10;
+
     public static function allCommandsDisabled(): bool
     {
         return self::storage()->exists('all-commands.disabled');
@@ -57,9 +59,22 @@ class CommandLock
 
     public static function error(?string $lockKey, string $msg): void
     {
-        if (!empty($lockKey) && self::isLocked($lockKey)) {
-            self::storage()->put(self::getErrorLockFilename($lockKey), Carbon::now() . ' ' . $msg);
+        if (!$lockKey || !self::isLocked($lockKey)) {
+            return;
         }
+
+        $errors = self::retrieveErrorLog($lockKey);
+        $errors[] = Carbon::now() . '|' . $msg;
+        $errors = array_slice($errors, -10);
+
+        self::storage()->put(self::getErrorLockFilename($lockKey), implode("\n", $errors));
+    }
+
+    private static function retrieveErrorLog(string $lockKey): array
+    {
+        $errorData = self::storage()->get(self::getErrorLockFilename($lockKey));
+
+        return $errorData ? explode("\n", $errorData) : [];
     }
 
     public static function getError(string $lockKey): ?string
@@ -96,7 +111,23 @@ class CommandLock
 
     public static function removeError(string $lockKey): void
     {
-        self::storage()->delete(self::getErrorLockFilename($lockKey));
+        $errors = self::retrieveErrorLog($lockKey);
+        if (empty($errors)) {
+            return;
+        }
+
+        $errors = array_slice($errors, 0 - self::KEEP_LAST_N_LINES);
+        $errors = array_filter(
+            $errors,
+            fn($val) => Carbon::parse(explode('|', $val)[0])
+                ->isAfter(Carbon::now()->subHours(72))
+        );
+
+        if (empty($errors)) {
+            self::storage()->delete(self::getErrorLockFilename($lockKey));
+        } else {
+            self::storage()->put(self::getErrorLockFilename($lockKey), implode("\n", $errors));
+        }
     }
 
     public static function removeLock(string $lockKey): void
