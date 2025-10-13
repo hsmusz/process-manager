@@ -64,17 +64,10 @@ class CommandLock
         }
 
         $errors = self::retrieveErrorLog($lockKey);
-        $errors[] = Carbon::now() . '|' . $msg;
+        $errors[] = sprintf('[%s] %s', Carbon::now(), $msg);
         $errors = array_slice($errors, -10);
 
         self::storage()->put(self::getErrorLockFilename($lockKey), implode("\n", $errors));
-    }
-
-    private static function retrieveErrorLog(string $lockKey): array
-    {
-        $errorData = self::storage()->get(self::getErrorLockFilename($lockKey));
-
-        return $errorData ? explode("\n", $errorData) : [];
     }
 
     public static function getError(string $lockKey): ?string
@@ -119,7 +112,7 @@ class CommandLock
         $errors = array_slice($errors, 0 - self::KEEP_LAST_N_LINES);
         $errors = array_filter(
             $errors,
-            fn($val) => Carbon::parse(explode('|', $val)[0])
+            fn($val) => Carbon::parse(substr($val, 1, (strpos($val, ']') - 1)))
                 ->isAfter(Carbon::now()->subHours(72))
         );
 
@@ -149,6 +142,13 @@ class CommandLock
     private static function getSoftLockNotificationFilename(string $lockKey): string
     {
         return self::getSoftLockFilename($lockKey) . '.notified';
+    }
+
+    private static function retrieveErrorLog(string $lockKey): array
+    {
+        $errorData = self::storage()->get(self::getErrorLockFilename($lockKey));
+
+        return $errorData ? explode("\n", $errorData) : [];
     }
 
     private static function storage(): Filesystem

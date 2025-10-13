@@ -19,14 +19,8 @@ class CommandsStatus extends Command
     protected $description = 'Get Lockable commands status';
     protected $signature = 'lock:commands:status';
 
-    public static function checkCommandStatus(string $class, ?string $param = null): string
+    public static function checkCommandStatus(string $lockKey): string
     {
-        $lockKey = $class::lockKey($param);
-
-        if (CommandLock::hasError($lockKey)) {
-            return self::COMMAND_STATUS_ERROR;
-        }
-
         if (CommandLock::isLocked($lockKey)) {
             if (CommandLock::isOutdatedLock($lockKey) && CommandLock::notified($lockKey)) {
                 return self::COMMAND_STATUS_LOCKED;
@@ -39,14 +33,11 @@ class CommandsStatus extends Command
             return self::COMMAND_STATUS_DISABLED;
         }
 
+        if (CommandLock::hasError($lockKey)) {
+            return self::COMMAND_STATUS_ERROR;
+        }
+
         return self::COMMAND_STATUS_IDLE;
-    }
-
-    public static function getError(string $class, ?string $param = null): ?string
-    {
-        $lockKey = $class::lockKey($param);
-
-        return CommandLock::getError($lockKey);
     }
 
     /**
@@ -55,7 +46,7 @@ class CommandsStatus extends Command
     public function handle(): void
     {
         $this->info(sprintf('1. All commands: %s', CommandLock::allCommandsDisabled() ? 'DISABLED' : 'Enabled'));
-        $this->info(sprintf('2. Process Manager: %s', self::checkCommandStatus(ProcessManager::class)));
+        $this->info(sprintf('2. Process Manager: %s', self::checkCommandStatus(ProcessManager::lockKey())));
         $style = new OutputFormatterStyle('yellow');
         $this->output->getFormatter()->setStyle('warning', $style);
     }

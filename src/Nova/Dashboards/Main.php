@@ -20,7 +20,7 @@ class Main extends Dashboard
         return array_merge(
             [
                 new NovaSingleValueCard('All commands', CommandLock::allCommandsDisabled() ? 'DISABLED' : 'Enabled'),
-                new NovaSingleValueCard('Process Manager', CommandsStatus::checkCommandStatus(ProcessManager::class)),
+                new NovaSingleValueCard('Process Manager', CommandsStatus::checkCommandStatus(ProcessManager::lockKey())),
             ],
             [
                 ...$this->commands(),
@@ -59,7 +59,8 @@ class Main extends Dashboard
 
     private function addCard(WelcomeCard $card, string $command, string $title, ?string $param = null): void
     {
-        $status = CommandsStatus::checkCommandStatus($command, $param);
+        $lockKey = $command::lockKey($param);
+        $status = CommandsStatus::checkCommandStatus($lockKey);
         $meta = match ($status) {
             CommandsStatus::COMMAND_STATUS_IDLE => ['shield-check', 'green'],
             CommandsStatus::COMMAND_STATUS_WORKING => ['cog', 'green'],
@@ -68,15 +69,15 @@ class Main extends Dashboard
             CommandsStatus::COMMAND_STATUS_ERROR => ['exclamation-circle', 'red'],
         };
 
-        $error = CommandsStatus::getError($command, $param);
-        if (!empty($error)) {
-            $error = sprintf(' (%s)', $error);
+        $errors = CommandLock::getError($lockKey);
+        if(!empty($errors)) {
+            $errors = '<br/>' . nl2br($errors);
         }
 
         $card->addItem(
             icon: $meta[0],
             title: $title . (!empty($param) ? ' (' . $param . ')' : ''),
-            content: sprintf('<strong style="color: %s;">%s</strong>%s', $meta[1], $status, $error)
+            content: sprintf('<strong style="color: %s;">%s</strong>%s', $meta[1], $status, $errors)
         );
     }
 }
