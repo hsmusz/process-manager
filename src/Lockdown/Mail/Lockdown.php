@@ -11,13 +11,18 @@ class Lockdown extends Mailable
 {
     use SerializesModels;
 
+    public const string LOCKDOWN_TYPE_SOFTLY = 'softly';
+    public const string LOCKDOWN_TYPE_HARD = 'hard';
+
     protected array $details;
     protected string $msg;
+    protected string $type;
 
-    public function __construct(string $msg, array $details, string $subject)
+    public function __construct(string $subject, string $msg, string $type, array $details)
     {
-        $this->msg = $msg;
         $this->subject = $subject;
+        $this->msg = $msg;
+        $this->type = $type;
         $this->details = $details;
     }
 
@@ -26,6 +31,7 @@ class Lockdown extends Mailable
         $this->subject($this->subject)
             ->view('process-manager::mails.lockdown', [
                 'msg' => $this->msg,
+                'heading' => $this->type === self::LOCKDOWN_TYPE_SOFTLY ? 'Soft Lockdown' : 'LOCKDOWN!',
                 'details' => $this->details,
             ]);
 

@@ -46,7 +46,12 @@ class CommandLock
 
                 if (!empty(config('process-manager.notify_on_soft_lock'))) {
                     Mail::to(config('process-manager.notify_on_soft_lock'))->send(
-                        new LockdownMail($msg, [], config('app.name') . ' Microservice - soft lock detected')
+                        new LockdownMail(
+                            config('app.name') . ' Microservice - soft lock detected',
+                            $msg,
+                            LockdownMail::LOCKDOWN_TYPE_SOFTLY,
+                            [],
+                        )
                     );
                 }
             }
