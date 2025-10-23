@@ -15,6 +15,7 @@ use Movecloser\ProcessManager\Nova\Metrics\NewProcesses;
 
 class Main extends Dashboard
 {
+    private const string HR_LINE = '<hr style="margin: 10px 0" />';
     protected const array COMMANDS = [];
 
     public function cards(): array
@@ -75,7 +76,7 @@ class Main extends Dashboard
 
         $errors = CommandLock::getError($lockKey);
         if (!empty($errors)) {
-            $errors = '<br/>' . nl2br($errors);
+            $errors = self::HR_LINE . str_replace("\n", self::HR_LINE, $errors);
         }
 
         $card->addItem(
