@@ -8,6 +8,7 @@ use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Nova\Nova;
 use Movecloser\ProcessManager\Console\Commands\ProcessManager;
+use Movecloser\ProcessManager\Console\Commands\RestartProcess;
 use Movecloser\ProcessManager\Contracts\ProcessesRepository;
 use Movecloser\ProcessManager\Nova\Dashboards\Main;
 use Movecloser\ProcessManager\Nova\Resources\Process;
@@ -41,6 +42,7 @@ class ProcessManagerServiceProvider extends ServiceProvider
 
             $this->commands([
                 ProcessManager::class,
+                RestartProcess::class,
             ]);
         }
 

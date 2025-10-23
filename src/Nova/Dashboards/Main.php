@@ -10,6 +10,8 @@ use Laravel\Nova\Dashboards\Main as Dashboard;
 use Movecloser\ProcessManager\Console\Commands\ProcessManager;
 use Movecloser\ProcessManager\Lockdown\CommandLock;
 use Movecloser\ProcessManager\Lockdown\CommandsStatus;
+use Movecloser\ProcessManager\Nova\Metrics\AvgProcessAttempts;
+use Movecloser\ProcessManager\Nova\Metrics\NewProcesses;
 
 class Main extends Dashboard
 {
@@ -19,6 +21,8 @@ class Main extends Dashboard
     {
         return array_merge(
             [
+                AvgProcessAttempts::make()->defaultRange(30)->width('1/2'),
+                NewProcesses::make()->defaultRange(30)->width('1/2'),
                 new NovaSingleValueCard('All commands', CommandLock::allCommandsDisabled() ? 'DISABLED' : 'Enabled'),
                 new NovaSingleValueCard('Process Manager', CommandsStatus::checkCommandStatus(ProcessManager::lockKey())),
             ],
@@ -70,14 +74,14 @@ class Main extends Dashboard
         };
 
         $errors = CommandLock::getError($lockKey);
-        if(!empty($errors)) {
+        if (!empty($errors)) {
             $errors = '<br/>' . nl2br($errors);
         }
 
         $card->addItem(
             icon: $meta[0],
             title: $title . (!empty($param) ? ' (' . $param . ')' : ''),
-            content: sprintf('<strong style="color: %s;">%s</strong>%s', $meta[1], $status, $errors)
+            content: sprintf('<div style="word-break: break-all"><strong style="color: %s;">%s</strong>%s</div>', $meta[1], $status, $errors)
         );
     }
 }
