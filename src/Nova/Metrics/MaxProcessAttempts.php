@@ -10,7 +10,7 @@ use Laravel\Nova\Metrics\Trend;
 use Laravel\Nova\Metrics\TrendResult;
 use Movecloser\ProcessManager\Models\Process;
 
-class AvgProcessAttempts extends Trend
+class MaxProcessAttempts extends Trend
 {
     public function cacheFor(): Carbon
     {
@@ -25,7 +25,7 @@ class AvgProcessAttempts extends Trend
 
     public function name(): string
     {
-        return 'Average process attempts';
+        return 'Max process attempts';
     }
 
     /**
