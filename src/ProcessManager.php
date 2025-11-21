@@ -83,7 +83,7 @@ class ProcessManager implements Contracts\ProcessManager
 
         if ($e instanceof ProcessException) {
             $retry = false;
-            $status = $e->status() ?? ProcessStatus::ERROR;
+            $status = $e->getStatus() ?? ProcessStatus::ERROR;
         }
 
         $details = [];

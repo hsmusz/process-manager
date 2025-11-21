@@ -23,12 +23,12 @@ class ProcessException extends Exception
         $this->status = $status;
     }
 
-    public function details(): array
+    public function getDetails(): array
     {
         return $this->details;
     }
 
-    public function status(): ?ProcessStatus
+    public function getStatus(): ?ProcessStatus
     {
         return $this->status;
     }
