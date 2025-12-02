@@ -108,7 +108,7 @@ class ProcessManager implements Contracts\ProcessManager
             Mail::to(config('process-manager.notify_on_lockdown'))
                 ->send(
                     new Lockdown(
-                        config('app.name') . ' Microservice - PROCESS MANAGER LOCKDOWN!',
+                        config('app.name') . ' - PROCESS MANAGER LOCKDOWN!',
                         $e->getMessage(),
                         Lockdown::LOCKDOWN_TYPE_HARD,
                         $details,

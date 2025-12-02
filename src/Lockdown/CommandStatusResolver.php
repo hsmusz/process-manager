@@ -4,11 +4,7 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager\Lockdown;
 
-use Illuminate\Console\Command;
-use Movecloser\ProcessManager\Console\Commands\ProcessManager;
-use Symfony\Component\Console\Formatter\OutputFormatterStyle;
-
-class CommandsStatus extends Command
+class CommandStatusResolver
 {
     public const string COMMAND_STATUS_IDLE = 'Idle';
     public const string COMMAND_STATUS_WORKING = 'Working';
@@ -16,17 +12,16 @@ class CommandsStatus extends Command
     public const string COMMAND_STATUS_LOCKED = 'LOCKED';
     public const string COMMAND_STATUS_ERROR = 'ERROR';
 
-    protected $description = 'Get Lockable commands status';
-    protected $signature = 'lock:commands:status';
+    protected static array $commands = [];
 
     public static function checkCommandStatus(string $lockKey): string
     {
         if (CommandLock::isLocked($lockKey)) {
             if (CommandLock::isOutdatedLock($lockKey) && CommandLock::notified($lockKey)) {
                 return self::COMMAND_STATUS_LOCKED;
-            } else {
-                return self::COMMAND_STATUS_WORKING;
             }
+
+            return self::COMMAND_STATUS_WORKING;
         }
 
         if (CommandLock::commandDisabled($lockKey)) {
@@ -40,14 +35,13 @@ class CommandsStatus extends Command
         return self::COMMAND_STATUS_IDLE;
     }
 
-    /**
-     * @throws \Throwable
-     */
-    public function handle(): void
+    public static function commands(): array
     {
-        $this->info(sprintf('1. All commands: %s', CommandLock::allCommandsDisabled() ? 'DISABLED' : 'Enabled'));
-        $this->info(sprintf('2. Process Manager: %s', self::checkCommandStatus(ProcessManager::lockKey())));
-        $style = new OutputFormatterStyle('yellow');
-        $this->output->getFormatter()->setStyle('warning', $style);
+        return static::$commands;
+    }
+
+    public static function registerCommands(array $commands): void
+    {
+        static::$commands = array_merge(static::$commands, $commands);
     }
 }

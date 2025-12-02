@@ -1,5 +1,27 @@
 # Laravel Component for Handling Processes in a Microservice Environment
 
+## Wymagania
+
+### Process Manager: register Processes
+```php
+    ProcessManagerFactory::registerProcesses([
+        NewOrderProcess::class => 'CREATE ORDER',
+        NewCreditMemoProcess::class => 'REFUND ORDER',
+        IssueCreditMemoProcess::class => 'ISSUE CREDIT MEMO',
+    ]);
+```
+
+### Command Status Resolver: register Commands
+```php
+    CommandStatusResolver::registerCommands([
+        GetMagentoInvoices::class => 'Get Magento Invoices',
+        GetMagentoProducts::class => 'Get Magento Products',
+        ImportCostInvoicesToBooks::class => ['Import Cost Invoices to Books', ['service1', 'service2']],
+        IssueAllegroMagentoInvoices::class => ['Issue Magento Allegro Invoices', [10, 24]],
+    ]);
+```
+
+
 ## Procedury
 
 ### Zatrzymanie działania
@@ -21,7 +43,7 @@ jest w stanie *Working*, należy odczekać, aż zakończy swoje działanie.
 Alternatywnie można użyć komendy CLI:
 
 ```bash
-php artisan app:command:status
+php artisan lock:commands:status
 ```
 
 ---

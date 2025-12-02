@@ -9,14 +9,13 @@ use Hapheus\NovaSingleValueCard\NovaSingleValueCard;
 use Laravel\Nova\Dashboards\Main as Dashboard;
 use Movecloser\ProcessManager\Console\Commands\ProcessManager;
 use Movecloser\ProcessManager\Lockdown\CommandLock;
-use Movecloser\ProcessManager\Lockdown\CommandsStatus;
+use Movecloser\ProcessManager\Lockdown\CommandStatusResolver;
 use Movecloser\ProcessManager\Nova\Metrics\MaxProcessAttempts;
 use Movecloser\ProcessManager\Nova\Metrics\NewProcesses;
 
 class Main extends Dashboard
 {
     private const string HR_LINE = '<hr style="margin: 10px 0" />';
-    protected const array COMMANDS = [];
 
     public function cards(): array
     {
@@ -25,7 +24,7 @@ class Main extends Dashboard
                 MaxProcessAttempts::make()->defaultRange(30)->width('1/2'),
                 NewProcesses::make()->defaultRange(30)->width('1/2'),
                 new NovaSingleValueCard('All commands', CommandLock::allCommandsDisabled() ? 'DISABLED' : 'Enabled'),
-                new NovaSingleValueCard('Process Manager', CommandsStatus::checkCommandStatus(ProcessManager::lockKey())),
+                new NovaSingleValueCard('Process Manager', CommandStatusResolver::checkCommandStatus(ProcessManager::lockKey())),
             ],
             [
                 ...$this->commands(),
@@ -35,43 +34,48 @@ class Main extends Dashboard
 
     protected function commands(): array
     {
-        if (empty(static::COMMANDS)) {
+        $commands = CommandStatusResolver::commands();
+        if (empty($commands)) {
             return [];
         }
 
         $card = WelcomeCard::make()
             ->title('Commands status');
 
-        foreach (static::COMMANDS as $command => $title) {
+        foreach ($commands as $command => $title) {
             if (!$title) {
                 $card->addItem('', '', '');
                 continue;
             }
 
             if (is_array($title)) {
-                $params = $title[1];
-                $title = $title[0];
-                foreach ($params as $param) {
-                    $this->addCard($card, $command, $title, (string) $param);
-                }
+                [$title, $params] = $title;
             } else {
-                $this->addCard($card, $command, $title);
+                $params = [null];
+            }
+
+            foreach ($params as $param) {
+                $this->addCard($card, $command, $title, $param);
             }
         }
 
         return [$card];
     }
 
-    private function addCard(WelcomeCard $card, string $command, string $title, ?string $param = null): void
+    private function addCard(WelcomeCard $card, string $command, string $title, mixed $param = null): void
     {
+        if (!empty($param)) {
+            $param = (string) $param;
+        }
+
         $lockKey = $command::lockKey($param);
-        $status = CommandsStatus::checkCommandStatus($lockKey);
+        $status = CommandStatusResolver::checkCommandStatus($lockKey);
         $meta = match ($status) {
-            CommandsStatus::COMMAND_STATUS_IDLE => ['shield-check', 'green'],
-            CommandsStatus::COMMAND_STATUS_WORKING => ['cog', 'green'],
-            CommandsStatus::COMMAND_STATUS_DISABLED => ['exclamation-circle', 'orange'],
-            CommandsStatus::COMMAND_STATUS_LOCKED => ['exclamation', 'red'],
-            CommandsStatus::COMMAND_STATUS_ERROR => ['exclamation-circle', 'red'],
+            CommandStatusResolver::COMMAND_STATUS_IDLE => ['shield-check', 'green'],
+            CommandStatusResolver::COMMAND_STATUS_WORKING => ['cog', 'green'],
+            CommandStatusResolver::COMMAND_STATUS_DISABLED => ['exclamation-circle', 'orange'],
+            CommandStatusResolver::COMMAND_STATUS_LOCKED => ['exclamation', 'red'],
+            CommandStatusResolver::COMMAND_STATUS_ERROR => ['exclamation-circle', 'red'],
         };
 
         $errors = CommandLock::getError($lockKey);
