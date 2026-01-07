@@ -43,7 +43,7 @@ trait LockHelper
 
     protected function commandDisabled(): bool
     {
-        if (empty($this->getLockKey()) || $this->option('skip-lock')) {
+        if (empty($this->getLockKey()) || !$this->shouldUseLock()) {
             return false;
         }
 
@@ -68,7 +68,11 @@ trait LockHelper
 
     protected function removeCommandLock(): void
     {
-        if ($this->getLockKey()) {
+        if(empty($this->getLockKey())) {
+            return;
+        }
+
+        if ($this->shouldUseLock()) {
             CommandLock::removeLock($this->getLockKey());
         }
     }
