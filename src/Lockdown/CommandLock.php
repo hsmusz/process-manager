@@ -31,7 +31,7 @@ class CommandLock
      */
     public static function delayAndLock(string $lockKey): void
     {
-        $rand = rand(100000, 1000000);
+        $rand = random_int(100000, 1000000);
         Log::info(
             sprintf('Command [%s]: Sleeping %d microseconds (%s seconds)', $lockKey, $rand, round($rand / 1000000, 2))
         );
@@ -59,6 +59,7 @@ class CommandLock
         }
 
         self::lock($lockKey);
+        self::markAsStarted($lockKey);
     }
 
     public static function error(?string $lockKey, string $msg): void
@@ -93,7 +94,12 @@ class CommandLock
     {
         $lockDate = Carbon::make(self::storage()->get(self::getSoftLockFilename($lockKey)));
 
-        return Carbon::now()->isAfter($lockDate->addSeconds(config('process-manager.softlock_time')));
+        return Carbon::now()->isAfter($lockDate?->addSeconds(config('process-manager.softlock_time')));
+    }
+
+    public static function lastExecutionDate(string $lockKey): string
+    {
+        return Carbon::make(self::storage()->get(self::getSoftLockFilename($lockKey) . '.execution'))?->format('Y-m-d H:i:s') ?? '';
     }
 
     public static function lock(string $lockKey): void
@@ -146,6 +152,11 @@ class CommandLock
     private static function getSoftLockNotificationFilename(string $lockKey): string
     {
         return self::getSoftLockFilename($lockKey) . '.notified';
+    }
+
+    private static function markAsStarted(string $lockKey): void
+    {
+        self::storage()->put(self::getSoftLockFilename($lockKey) . '.execution', Carbon::now());
     }
 
     private static function retrieveErrorLog(string $lockKey): array

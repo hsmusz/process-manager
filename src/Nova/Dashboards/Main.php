@@ -71,7 +71,7 @@ class Main extends Dashboard
         $lockKey = $command::lockKey($param);
         $status = CommandStatusResolver::checkCommandStatus($lockKey);
         $meta = match ($status) {
-            CommandStatusResolver::COMMAND_STATUS_IDLE => ['shield-check', 'green'],
+            CommandStatusResolver::COMMAND_STATUS_IDLE => ['template', 'green'],
             CommandStatusResolver::COMMAND_STATUS_WORKING => ['cog', 'green'],
             CommandStatusResolver::COMMAND_STATUS_DISABLED => ['exclamation-circle', 'orange'],
             CommandStatusResolver::COMMAND_STATUS_LOCKED => ['exclamation', 'red'],
@@ -83,10 +83,15 @@ class Main extends Dashboard
             $errors = self::HR_LINE . str_replace("\n", self::HR_LINE, $errors);
         }
 
+        $last = CommandLock::lastExecutionDate($lockKey);
+        if(!empty($last)) {
+            $last = '<div class="font-size: 10px;">last execution: ' . $last . '</div>';
+        }
+
         $card->addItem(
             icon: $meta[0],
             title: $title . (!empty($param) ? ' (' . $param . ')' : ''),
-            content: sprintf('<div style="word-break: break-all"><strong style="color: %s;">%s</strong>%s</div>', $meta[1], $status, $errors)
+            content: $last . sprintf('<div style="word-break: break-all"><strong style="color: %s;">%s</strong>%s</div>', $meta[1], $status, $errors)
         );
     }
 }
