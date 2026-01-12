@@ -85,7 +85,7 @@ trait LockHelper
     private function shouldUseLock(): bool
     {
         $useLock = true;
-        if ($this->option('skip-lock')) {
+        if ($this->hasOption('skip-lock') && $this->option('skip-lock')) {
             $useLock = false;
         }
 
