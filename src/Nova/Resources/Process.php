@@ -80,7 +80,7 @@ class Process extends Resource
 
             ...$this->extraColumns(),
 
-            Badge::make('status')->map([
+            Badge::make('Status')->map([
                 ProcessStatus::PENDING->value => 'info',
                 ProcessStatus::IN_PROGRESS->value => 'info',
                 ProcessStatus::INFO->value => 'warning',
@@ -95,7 +95,6 @@ class Process extends Resource
 
             DateTime::make('Created', 'created_at')
                 ->displayUsing(fn($date) => $date?->toDateTimeString())
-                ->onlyOnIndex()
                 ->readonly()
                 ->sortable(),
 

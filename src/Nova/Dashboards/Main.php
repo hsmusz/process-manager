@@ -71,6 +71,7 @@ class Main extends Dashboard
         $lockKey = $command::lockKey($param);
         $status = CommandStatusResolver::checkCommandStatus($lockKey);
         $meta = match ($status) {
+            // use https://v1.heroicons.com/
             CommandStatusResolver::COMMAND_STATUS_IDLE => ['template', 'green'],
             CommandStatusResolver::COMMAND_STATUS_WORKING => ['cog', 'green'],
             CommandStatusResolver::COMMAND_STATUS_DISABLED => ['exclamation-circle', 'orange'],
