@@ -11,8 +11,8 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('processes', static function (Blueprint $table) {
-            $table->string('channel')->index();
-            $table->index(['process', 'processable_type', 'processable_id', 'channel']);
+            $table->string('channel')->default('default')->after('processable_id')->index();
+            // TODO: add channel to composite index
         });
     }
 
@@ -22,7 +22,6 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('processes', static function (Blueprint $table) {
-            $table->dropIndex(['process', 'processable_type', 'processable_id', 'channel']);
             $table->dropIndex(['channel']);
             $table->dropColumn('channel');
         });
