@@ -19,6 +19,7 @@ class Process extends Model
     public const string RETRY_AFTER = 'retry_after';
     public const string STATUS = 'status';
     public const string VERSION = 'version';
+    public const string CHANNEL = 'channel';
 
     protected $casts = [
         self::META => 'array',
@@ -35,6 +36,7 @@ class Process extends Model
         self::RETRY_AFTER,
         self::STATUS,
         self::VERSION,
+        self::CHANNEL,
     ];
 
     protected $table = 'processes';

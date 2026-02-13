@@ -7,7 +7,6 @@ namespace Movecloser\ProcessManager;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Support\Facades\Mail;
-use Movecloser\ProcessManager\Contracts\ProcessesRepository;
 use Movecloser\ProcessManager\Contracts\ProcessTask;
 use Movecloser\ProcessManager\Enum\ProcessStatus;
 use Movecloser\ProcessManager\Exceptions\ProcessEndedException;
@@ -24,13 +23,13 @@ class ProcessManager implements Contracts\ProcessManager
 {
     protected const int MAX_RETRIES = 50;
     protected const int RETRY_AFTER = 60; // in seconds
-
+    protected ?string $gotoStep = null;
     protected ?string $nextStep = null;
     private Contracts\Process|Contracts\ProcessSteps $process;
 
     public function __construct(
         protected readonly Process $model,
-        protected readonly ProcessesRepository $processes,
+        protected readonly string $channel,
     ) {
     }
 
@@ -129,6 +128,18 @@ class ProcessManager implements Contracts\ProcessManager
                 continue;
             }
 
+            if ($this->gotoStep !== null && !in_array($step, [AbstractProcess::START, AbstractProcess::FINISH])) {
+                $goto = array_search($this->gotoStep, $this->process->getSteps());
+                if ($goto !== false
+                    && $step !== $goto
+                    && !$this->process->isAfter($step, $goto)
+                ) {
+                    $this->persistStep($step, ProcessStatus::INFO, 'Skipping step', ['SKIPPED']);
+                    $this->prepareNextStep($step);
+                    continue;
+                }
+            }
+
             $this->log('Process | processing process ' . $this->model->id . ' step ' . $step);
 
             $this->process->beforeNextStep();
@@ -166,11 +177,14 @@ class ProcessManager implements Contracts\ProcessManager
             new Processable(
                 $this->model->processable_type,
                 $this->model->processable_id,
-                $this->model->meta
+                $this->model->meta,
+                $this->model->channel,
             ),
             $this->model->version
         );
         $this->process->validate();
+
+        $this->gotoStep = $this->model->meta['goto_step'] ?? null;
 
         $this->nextStep = $this->getNextStep();
 
@@ -187,6 +201,11 @@ class ProcessManager implements Contracts\ProcessManager
     protected function success(string $step, string $msg, array $details = []): void
     {
         $this->persistStep($step, ProcessStatus::SUCCESS, $msg, $details);
+    }
+
+    private function channelMessage(string $msg): string
+    {
+        return '[' . $this->channel . '] ' . $msg;
     }
 
     /**
@@ -216,10 +235,10 @@ class ProcessManager implements Contracts\ProcessManager
     private function log(string $msg, ?Throwable $e = null): void
     {
         // todo: validate channel is configured
-        logger()->channel('process-manager')->info($msg);
+        logger()->channel('process-manager')->info($this->channelMessage($msg));
         if ($e) {
-            logger()->channel('process-manager')->error($e->getMessage());
-            logger()->channel('process-manager')->error($e->getTraceAsString());
+            logger()->channel('process-manager')->error($this->channelMessage($e->getMessage()));
+            logger()->channel('process-manager')->error($this->channelMessage($e->getTraceAsString()));
         }
     }
 
@@ -232,13 +251,21 @@ class ProcessManager implements Contracts\ProcessManager
         string $message,
         array $details = [],
     ): void {
+        if (array_key_exists('process_meta', $details)) {
+            $meta = $this->model->meta;
+            $meta = array_merge_recursive($meta, $details['process_meta']);
+            $this->model->meta = $meta;
+            $this->model->save();
+            unset($details['process_meta']);
+        }
+
         $detailsJson = json_encode($details, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT);
         if ($detailsJson === false) {
             throw new Exception('Could not encode details to JSON.');
         }
 
         $processStep = new ProcessStep();
-        $processStep->setAttribute(ProcessStep::STEP, $step);
+        $processStep->setAttribute(ProcessStep::STEP, $step ?? 'INIT');
         $processStep->setAttribute(ProcessStep::STATUS, $status);
         $processStep->setAttribute(ProcessStep::MESSAGE, $message);
         $processStep->setAttribute(ProcessStep::DETAILS, $detailsJson);

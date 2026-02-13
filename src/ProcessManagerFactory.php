@@ -6,7 +6,6 @@ namespace Movecloser\ProcessManager;
 
 use Closure;
 use InvalidArgumentException;
-use Movecloser\ProcessManager\Contracts\ProcessesRepository;
 use Movecloser\ProcessManager\Contracts\ProcessManager;
 use Movecloser\ProcessManager\Models\Process;
 use ReflectionClass;
@@ -22,16 +21,12 @@ class ProcessManagerFactory
         static::$extraColumns = $extraColumns;
     }
 
-    public static function extraColumns(): array
+    public static function extraColumns(string $channel): array
     {
-        return static::$extraColumns;
+        return static::$extraColumns[$channel] ?? [];
     }
 
-    /**
-     * @throws \Illuminate\Contracts\Container\BindingResolutionException
-     * @throws \InvalidArgumentException
-     */
-    public static function make(Process $process): ProcessManager
+    public static function make(Process $process, string $channel): ProcessManager
     {
         if (!array_key_exists($process->process, static::$processes)) {
             throw new InvalidArgumentException(sprintf('The process "%s" is not registered.', $process->process));
@@ -39,7 +34,7 @@ class ProcessManagerFactory
 
         return new \Movecloser\ProcessManager\ProcessManager(
             $process,
-            app()->make(ProcessesRepository::class)
+            $channel,
         );
     }
 
@@ -74,7 +69,7 @@ class ProcessManagerFactory
         static::$processes = array_merge(static::$processes, $processes);
     }
 
-    public static function resolveUser(int|string $id)
+    public static function resolveUser(int|string $id): string
     {
         if (is_null(static::$userResolver)) {
             return 'user id:' . $id;

@@ -4,10 +4,8 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager\Nova\Resources;
 
-use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Laravel\Nova\Fields\Badge;
 use Laravel\Nova\Fields\Code;
@@ -30,6 +28,7 @@ class Process extends Resource
 {
     use HideAllActions;
 
+    public static string $channel = 'default';
     public static $group = 'Process Manager';
     public static string $model = Model::class;
     public static $search = [
@@ -39,6 +38,11 @@ class Process extends Resource
     public static array $sort = [
         'id' => 'desc',
     ];
+
+    public static function channel(): string
+    {
+        return self::$channel;
+    }
 
     public function actions(NovaRequest $request): array
     {
@@ -54,6 +58,16 @@ class Process extends Resource
     public function authorizedToView(Request $request): bool
     {
         return true;
+    }
+
+    public function extraColumns(): array
+    {
+        $columns = [];
+        foreach (ProcessManagerFactory::extraColumns(static::$channel) as $column) {
+            $columns[] = $column($this->resource);
+        }
+
+        return $columns;
     }
 
     /**
@@ -139,18 +153,13 @@ class Process extends Resource
         ];
     }
 
-    public function filters(NovaRequest $request): array
-    {
-        return [
-        ];
-    }
-
     public function menu(Request $request): MenuItem
     {
         $counts = static::$model::whereNotIn('status', [
             ProcessStatus::ABORTED,
             ProcessStatus::SUCCESS,
         ])
+            ->where('channel', static::$channel)
             ->groupBy('status')
             ->select(['status', DB::raw('count(*) as count')])
             ->pluck('count', 'status');
@@ -167,16 +176,6 @@ class Process extends Resource
         }
 
         return parent::menu($request)->withBadge((string) $counts->sum(), $type);
-    }
-
-    public function extraColumns(): array
-    {
-        $columns = [];
-        foreach (ProcessManagerFactory::extraColumns() as $columnLabel => $key) {
-            $columns[] = Text::make($columnLabel, fn() => Arr::get($this->meta, 'display.' . $key))->readonly()->copyable();
-        }
-
-        return $columns;
     }
 
 }

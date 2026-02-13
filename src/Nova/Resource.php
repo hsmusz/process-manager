@@ -25,6 +25,10 @@ abstract class Resource extends NovaResource
 
     public static function indexQuery(NovaRequest $request, $query): Builder
     {
+        if (property_exists(static::class, 'channel')) {
+            $query = $query->where('channel', static::$channel);
+        }
+
         if (empty($request->get('orderBy'))) {
             $query->getQuery()->orders = [];
 
