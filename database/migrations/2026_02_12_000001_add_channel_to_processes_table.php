@@ -12,8 +12,9 @@ return new class extends Migration {
     {
         Schema::table('processes', static function (Blueprint $table) {
             $table->string('channel')->default('default')->after('processable_id')->index();
-            $table->dropIndex(['process', 'processable_type', 'processable_id']);
-            $table->index(['process', 'processable_type', 'processable_id', 'channel'], 'idx_processes_cmp');
+            // TODO: fix index: 1071 Specified key was too long;
+//            $table->dropIndex(['process', 'processable_type', 'processable_id']);
+//            $table->index(['process', 'processable_type', 'processable_id', 'channel'], 'idx_processes_cmp');
 
         });
     }
