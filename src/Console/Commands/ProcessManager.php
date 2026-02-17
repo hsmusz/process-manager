@@ -120,9 +120,9 @@ class ProcessManager extends Command
     private function startNextProcess(): int
     {
         if ($this->argument('processId')) {
-            $process = $this->processes->find(intval($this->argument('processId')));
-            if ($process->hasFinished()) {
-                $this->error('Process has already finished');
+            $process = $this->processes->find((int) $this->argument('processId'));
+            if ($process->hasFinished() && !$this->option('force')) {
+                $this->error('Process already finished.');
 
                 return self::INVALID;
             }
