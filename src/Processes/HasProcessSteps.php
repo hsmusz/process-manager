@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager\Processes;
 
-use Movecloser\ProcessManager\Exceptions\ProcessException;
-use Movecloser\ProcessManager\Processable;
-use Movecloser\ProcessManager\ProcessResult;
-use Throwable;
-
 trait HasProcessSteps
 {
     protected const array STEPS = [];
@@ -36,9 +31,14 @@ trait HasProcessSteps
         return $this->stepsKeys()[$index + 1] ?? null;
     }
 
-    private function getIndex(string $val): ?int
+    private function getIndex(string $val): int
     {
-        return array_search($val, $this->stepsKeys());
+        $index = array_search($val, $this->stepsKeys());
+        if (false === $index) {
+            $index = -1;
+        }
+
+        return $index;
     }
 
     private function stepsKeys(): array

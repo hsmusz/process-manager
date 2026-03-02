@@ -122,7 +122,7 @@ class CommandLock
         $errors = array_slice($errors, 0 - self::KEEP_LAST_N_LINES);
         $errors = array_filter(
             $errors,
-            fn($val) => Carbon::parse(substr($val, 1, (strpos($val, ']') - 1)))
+            static fn($val) => Carbon::parse(substr($val, 1, (strpos($val, ']') - 1)))
                 ->isAfter(Carbon::now()->subHours(72))
         );
 

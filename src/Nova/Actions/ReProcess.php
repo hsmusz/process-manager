@@ -27,7 +27,7 @@ class ReProcess extends Action
         /** @var \Movecloser\ProcessManager\Models\Process $process */
         $process = $models->first();
         if ($process->hasFinished()) {
-            return Action::danger('Process already finished');
+            return Action::danger('Process already finished.');
         }
 
         if (!$process->canBeRestarted()) {

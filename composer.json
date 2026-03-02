@@ -15,7 +15,8 @@
         "laravel/nova": "^4.0",
         "hapheus/nova-single-value-card": "dev-main",
         "digital-creative/icon-action-toolbar": "dev-main",
-        "digital-creative/nova-welcome-card": "^0.0.2"
+        "digital-creative/nova-welcome-card": "^0.0.2",
+        "ideatocode/nova-spacer-card": "^1.0"
     },
     "repositories": [
         {

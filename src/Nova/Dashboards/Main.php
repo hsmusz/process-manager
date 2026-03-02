@@ -6,6 +6,7 @@ namespace Movecloser\ProcessManager\Nova\Dashboards;
 
 use DigitalCreative\NovaWelcomeCard\WelcomeCard;
 use Hapheus\NovaSingleValueCard\NovaSingleValueCard;
+use Ideatocode\NovaSpacerCard\NovaSpacerCard;
 use Laravel\Nova\Dashboards\Main as Dashboard;
 use Movecloser\ProcessManager\Console\Commands\ProcessManager;
 use Movecloser\ProcessManager\Lockdown\CommandLock;
@@ -23,8 +24,12 @@ class Main extends Dashboard
             [
                 MaxProcessAttempts::make()->defaultRange(30)->width('1/2'),
                 NewProcesses::make()->defaultRange(30)->width('1/2'),
-                new NovaSingleValueCard('All commands', CommandLock::allCommandsDisabled() ? 'DISABLED' : 'Enabled'),
-                new NovaSingleValueCard('Process Manager', CommandStatusResolver::checkCommandStatus(ProcessManager::lockKey())),
+            ],
+            [
+                (new NovaSpacerCard())->width('full')->classes('bg-gray-100')->style('height: .5rem'),
+                (new NovaSingleValueCard('All commands', CommandLock::allCommandsDisabled() ? 'DISABLED' : 'Enabled'))->width('1/4'),
+                new NovaSingleValueCard('Process Manager', CommandStatusResolver::checkCommandStatus(ProcessManager::lockKey('default'))),
+                new NovaSingleValueCard('Process Manager - TCPOS', CommandStatusResolver::checkCommandStatus(ProcessManager::lockKey('tcpos'))),
             ],
             [
                 ...$this->commands(),
@@ -85,7 +90,7 @@ class Main extends Dashboard
         }
 
         $last = CommandLock::lastExecutionDate($lockKey);
-        if(!empty($last)) {
+        if (!empty($last)) {
             $last = '<div class="font-size: 10px;">last execution: ' . $last . '</div>';
         }
 

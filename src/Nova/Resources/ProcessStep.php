@@ -17,8 +17,6 @@ class ProcessStep extends Resource
     public static $displayInNavigation = false;
     public static string $model = \Movecloser\ProcessManager\Models\ProcessStep::class;
     public static $perPageViaRelationship = 100;
-    public static $search = ['id'];
-    public static $title = 'id';
 
     public function fields(NovaRequest $request): array
     {

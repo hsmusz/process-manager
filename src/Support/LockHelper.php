@@ -58,7 +58,7 @@ trait LockHelper
 
         $param = null;
         if (method_exists($this, 'lockKeyArgument') && !empty($this->lockKeyArgument())) {
-            $param = $this->argument($this->lockKeyArgument());
+            $param = $this->lockKeyArgument();
         }
 
         $this->lockKey = static::lockKey($param);

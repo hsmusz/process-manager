@@ -5,34 +5,29 @@ declare(strict_types=1);
 namespace Movecloser\ProcessManager\Repositories;
 
 use Carbon\Carbon;
-use Exception;
 use Movecloser\ProcessManager\Contracts\ProcessesRepository as Contract;
 use Movecloser\ProcessManager\Enum\ProcessStatus;
 use Movecloser\ProcessManager\Models\Process;
 use Movecloser\ProcessManager\Processable;
-use Throwable;
 
 class ProcessesRepository implements Contract
 {
+
     private const int PROCESS_TTL = 60 * 60; // 1 hour
 
-    /**
-     * @throws \Exception
-     */
+    // TODO: Add Channel management via Factory Setup ?
+
     public static function createProcess(string $process, Processable $processable): Process
     {
-        try {
-            return Process::create([
-                Process::STATUS => ProcessStatus::PENDING,
-                Process::PROCESS => $process,
-                Process::PROCESSABLE_TYPE => $processable->type,
-                Process::PROCESSABLE_ID => $processable->id,
-                Process::VERSION => $process::$version,
-                Process::META => $processable->meta,
-            ]);
-        } catch (Throwable $e) {
-            throw new Exception(sprintf('Error while creating process, Error: %s', $e->getMessage()));
-        }
+        return Process::create([
+            Process::STATUS => ProcessStatus::PENDING,
+            Process::PROCESS => $process,
+            Process::PROCESSABLE_TYPE => $processable->type,
+            Process::PROCESSABLE_ID => $processable->id,
+            Process::VERSION => $process::$version,
+            Process::META => $processable->meta,
+            Process::CHANNEL => $processable->channel,
+        ]);
     }
 
     public static function hasProcessFor(string $process, Processable $processable): bool
@@ -42,52 +37,9 @@ class ProcessesRepository implements Contract
                 'process' => $process,
                 'processable_type' => $processable->type,
                 'processable_id' => $processable->id,
+                'channel' => $processable->channel,
             ])
             ->exists();
-    }
-
-    public function hasTimeoutProcess(): bool
-    {
-        return Process::where('status', ProcessStatus::IN_PROGRESS)
-            ->where('updated_at', '<', now()->subSeconds(self::PROCESS_TTL))
-            ->exists();
-    }
-
-    public function isFatalErrorInProcesses(int $id): bool
-    {
-        return Process::query()
-            ->whereIn('status', [
-                ProcessStatus::ERROR,
-                ProcessStatus::EXCEPTION,
-            ])
-            ->whereNot('id', $id)
-            ->exists();
-    }
-
-    public function isRunning(): bool
-    {
-        return Process::where('status', ProcessStatus::IN_PROGRESS)
-            ->exists();
-    }
-
-    public function nextAvailableProcess(bool $forceRetry = false, bool $allowFix = false): ?Process
-    {
-        $statuses = [ProcessStatus::PENDING, ProcessStatus::RETRY];
-        if($allowFix) {
-            $statuses[] = ProcessStatus::ERROR;
-            $statuses[] = ProcessStatus::EXCEPTION;
-        }
-        $process = Process::whereIn('status', $statuses)
-            ->orderBy('id')
-            ->first();
-
-        if (!$process
-            || (ProcessStatus::RETRY === $process->status && Carbon::now()->isBefore($process->retry_after) && !$forceRetry)
-        ) {
-            return null;
-        }
-
-        return $process;
     }
 
     public function find(int $id): Process
@@ -95,9 +47,61 @@ class ProcessesRepository implements Contract
         return Process::findOrFail($id);
     }
 
-    public function restartTimoutProcess(): void
+    public function hasTimeoutProcess(string $channel): bool
     {
-        $process = Process::where('status', ProcessStatus::IN_PROGRESS)->firstOrFail();
+        return Process::where('status', ProcessStatus::IN_PROGRESS)
+            ->where('updated_at', '<', now()->subSeconds(self::PROCESS_TTL))
+            ->where('channel', $channel)
+            ->exists();
+    }
+
+    public function isFatalErrorInProcesses(string $channel, int $id): bool
+    {
+        return Process::query()
+            ->whereIn('status', [
+                ProcessStatus::ERROR,
+                ProcessStatus::EXCEPTION,
+            ])
+            ->whereNot('id', $id)
+            ->where('channel', $channel)
+            ->exists();
+    }
+
+    public function isRunning(string $channel): bool
+    {
+        return Process::where('status', ProcessStatus::IN_PROGRESS)
+            ->where('channel', $channel)
+            ->exists();
+    }
+
+    public function nextAvailableProcess(string $channel, bool $restart = false): ?Process
+    {
+        $statuses = [ProcessStatus::PENDING, ProcessStatus::RETRY];
+        if ($restart) {
+            $statuses[] = ProcessStatus::ERROR;
+            $statuses[] = ProcessStatus::EXCEPTION;
+        }
+
+        $process = Process::whereIn('status', $statuses)
+            ->where('channel', $channel)
+            ->orderBy('id')
+            ->first();
+
+        if (!$process
+            || (!$restart && ProcessStatus::RETRY === $process->status && Carbon::now()->isBefore($process->retry_after))
+        ) {
+            return null;
+        }
+
+        return $process;
+    }
+
+    public function restartTimeoutProcess(string $channel): void
+    {
+        $process = Process::where('status', ProcessStatus::IN_PROGRESS)
+            ->where('channel', $channel)
+            ->firstOrFail();
+
         $process->restart();
     }
 }

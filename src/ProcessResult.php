@@ -9,7 +9,11 @@ class ProcessResult
     public function __construct(
         public string $message,
         public array $data = [],
+        array $processMeta = [],
     ) {
+        if (!empty($processMeta)) {
+            $this->data['process_meta'] = $processMeta;
+        }
     }
 
 }
