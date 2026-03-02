@@ -143,9 +143,9 @@ class Process extends Resource
             Panel::make(
                 'Logs',
                 array_map(
-                    fn($val) => Code::make(
+                    static fn($val) => Code::make(
                         $val['action'] ?? '?',
-                        fn() => str_replace("\\", '', json_encode($val['payload'] ?? [], JSON_PRETTY_PRINT))
+                        static fn() => str_replace("\\", '', json_encode($val['payload'] ?? [], JSON_PRETTY_PRINT))
                     ),
                     $logs
                 )

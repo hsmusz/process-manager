@@ -261,7 +261,7 @@ class ProcessManager implements Contracts\ProcessManager
 
         $detailsJson = json_encode($details, JSON_UNESCAPED_SLASHES + JSON_PRETTY_PRINT);
         if ($detailsJson === false) {
-            throw new Exception('Could not encode details to JSON.');
+            throw new ProcessException('Could not encode details to JSON.');
         }
 
         $processStep = new ProcessStep();

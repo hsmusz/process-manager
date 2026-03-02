@@ -21,7 +21,7 @@ class ProcessManagerServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        AboutCommand::add('Process Manager', fn() => ['Version' => '1.0.0']);
+        AboutCommand::add('Process Manager', static fn() => ['Version' => '1.0.4']);
 
         $this->loadMigrationsFrom(__DIR__ . '/../database/migrations');
 
