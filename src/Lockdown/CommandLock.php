@@ -69,10 +69,10 @@ class CommandLock
         }
 
         $errors = self::retrieveErrorLog($lockKey);
-        $errors[] = sprintf('[%s] %s', Carbon::now(), $msg);
+        $errors[] = sprintf('[%s] %s', Carbon::now(), str_replace(PHP_EOL, ' ', $msg));
         $errors = array_slice($errors, -10);
 
-        self::storage()->put(self::getErrorLockFilename($lockKey), implode("\n", $errors));
+        self::storage()->put(self::getErrorLockFilename($lockKey), implode("\n", $errors) . PHP_EOL);
     }
 
     public static function getError(string $lockKey): ?string
