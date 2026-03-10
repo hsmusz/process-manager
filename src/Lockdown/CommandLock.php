@@ -72,7 +72,7 @@ class CommandLock
         $errors[] = sprintf('[%s] %s', Carbon::now(), str_replace(PHP_EOL, ' ', $msg));
         $errors = array_slice($errors, -10);
 
-        self::storage()->put(self::getErrorLockFilename($lockKey), implode("\n", $errors) . PHP_EOL);
+        self::storage()->put(self::getErrorLockFilename($lockKey), implode("\n", $errors));
     }
 
     public static function getError(string $lockKey): ?string
@@ -129,7 +129,7 @@ class CommandLock
         if (empty($errors)) {
             self::storage()->delete(self::getErrorLockFilename($lockKey));
         } else {
-            self::storage()->put(self::getErrorLockFilename($lockKey), implode("\n", $errors));
+            self::storage()->put(self::getErrorLockFilename($lockKey), implode(PHP_EOL, $errors));
         }
     }
 
@@ -163,7 +163,7 @@ class CommandLock
     {
         $errorData = self::storage()->get(self::getErrorLockFilename($lockKey));
 
-        return $errorData ? explode("\n", $errorData) : [];
+        return $errorData ? explode(PHP_EOL, $errorData) : [];
     }
 
     private static function storage(): Filesystem
