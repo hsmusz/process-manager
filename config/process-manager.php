@@ -3,6 +3,20 @@
 return [
     /*
     |--------------------------------------------------------------------------
+    | Channels
+    |--------------------------------------------------------------------------
+    |
+    | Process manager channels configuration
+    | The Default channel is 'Process Manager'
+    | Any other channels should be defined in the config as `channel => name`
+    |
+    */
+    'channels' => [
+        'default' => 'Process Manager',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Lockdown configuration
     |--------------------------------------------------------------------------
     |
