@@ -20,17 +20,23 @@ class Main extends Dashboard
 
     public function cards(): array
     {
+        $cards = [
+            (new NovaSpacerCard())->width('full')->classes('bg-gray-100')->style('height: .5rem'),
+            (new NovaSingleValueCard('All commands', CommandLock::allCommandsDisabled() ? 'DISABLED' : 'Enabled'))->width('1/4'),
+        ];
+
+        $channels = config('process-manager.channels', ['default' => 'Process Manager']);
+
+        foreach ($channels as $channel => $name) {
+            $cards[] = new NovaSingleValueCard($name, CommandStatusResolver::checkCommandStatus(ProcessManager::lockKey($channel)));
+        }
+
         return array_merge(
             [
                 MaxProcessAttempts::make()->defaultRange(30)->width('1/2'),
                 NewProcesses::make()->defaultRange(30)->width('1/2'),
             ],
-            [
-                (new NovaSpacerCard())->width('full')->classes('bg-gray-100')->style('height: .5rem'),
-                (new NovaSingleValueCard('All commands', CommandLock::allCommandsDisabled() ? 'DISABLED' : 'Enabled'))->width('1/4'),
-                new NovaSingleValueCard('Process Manager', CommandStatusResolver::checkCommandStatus(ProcessManager::lockKey('default'))),
-                new NovaSingleValueCard('Process Manager - TCPOS', CommandStatusResolver::checkCommandStatus(ProcessManager::lockKey('tcpos'))),
-            ],
+            $cards,
             [
                 ...$this->commands(),
             ]
