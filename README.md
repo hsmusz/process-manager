@@ -1,186 +1,12 @@
-# Laravel Component for Handling Processes in a Microservice Environment
-
-## Wymagania
-
-### Process Manager: register Processes
-```php
-    ProcessManagerFactory::registerProcesses([
-        NewOrderProcess::class => 'CREATE ORDER',
-        NewCreditMemoProcess::class => 'REFUND ORDER',
-        IssueCreditMemoProcess::class => 'ISSUE CREDIT MEMO',
-    ]);
-```
-
-### Command Status Resolver: register Commands
-```php
-    CommandStatusResolver::registerCommands([
-        GetMagentoInvoices::class => 'Get Magento Invoices',
-        GetMagentoProducts::class => 'Get Magento Products',
-        ImportCostInvoicesToBooks::class => ['Import Cost Invoices to Books', ['service1', 'service2']],
-        IssueAllegroMagentoInvoices::class => ['Issue Magento Allegro Invoices', [10, 24]],
-    ]);
-```
-
-
-## Procedury
-
-### Zatrzymanie działania
-
-_(W przypadku restartu aplikacji, bazy danych lub systemów zewnętrznych 
-oraz przy planowanych przerwach w działaniu systemów)_
-
-Aby bezpiecznie zatrzymać działanie serwisu, należy wyłączyć wszystkie komendy, 
-dodając plik `all-commands.disabled` w katalogu `storage/app/locks/`:
-
-```bash
-$ touch storage/app/locks/all-commands.disabled
-```
-
-Następnie należy wejść na [stronę główną serwisu](https://service.aelia.pl/nova/dashboards/main) i sprawdzić, 
-czy wszystkie komendy mają status *DISABLED* lub *LOCKED* (w przypadku błędów). Jeśli którakolwiek komenda 
-jest w stanie *Working*, należy odczekać, aż zakończy swoje działanie.
-
-Alternatywnie można użyć komendy CLI:
-
-```bash
-php artisan lock:commands:status
-```
-
----
-
-### Klucze blokad i szacowany czas pracy komend
-
-Blokady są używane do uniemożliwienia wykonywania niektórych komend na czas określonych operacji. Typowe klucze:
-
-- **Process Manager**: ~5 minut (`process-manager`)
-
----
-
-### Wznowienie działania systemu
-
-Aby wznowić system, usuń plik blokady `all-commands.disabled`:
-
-```bash
-$ rm storage/app/locks/all-commands.disabled
-```
-
-Po wejściu na [stronę główną serwisu](https://service.aelia.pl/nova/dashboards/main), upewnij się, 
-że wszystkie komendy są w statusie `Idle` lub `Working`.
-
----
-
-### Zatrzymanie działania pojedynczych komend
-
-_(Dla tymczasowych napraw lub odłączenia komendy nadrzędnej od zależnych procesów, 
-np.: *Get Orders* => *Process Manager*)._
-
-Aby zatrzymać konkretną komendę, utwórz plik w katalogu `storage/app/locks/` odpowiadający kluczowi tej komendy 
-i kończący się `.disabled`:
-
-```bash
-$ touch storage/app/locks/process-manager.disabled
-```
-
-Po tej operacji w panelu głównym serwisu dana komenda powinna mieć status `DISABLED`.
-
----
-
-### Wznowienie działania pojedynczych komend
-
-Aby wznowić działanie wybranej komendy, usuń plik blokady z katalogu `storage/app/locks/`:
-
-```bash
-$ rm storage/app/locks/process-manager.disabled
-```
-
----
-
-### Blokada komendy w wyniku niespodziewanej przerwy w pracy
-
-Podczas działania systemu komendy automatycznie nakładają tymczasową blokadę (`.lock`), aby uniemożliwić ponowne 
-uruchomienie do czasu zakończenia aktualnej instancji. W przypadku sytuacji wyjątkowych (np. brak dostępności 
-usługi lub błędy systemowe), blokady mogą zostać oznaczone jako przedawnione.
-
-W sytuacjach nieoczekiwanych problemów:
-
-- Sprawdź status komendy na stronie głównej systemu (np. `LOCKED`).
-- Przeanalizuj logi, aby określić przyczynę błędu.
-- Gdy problem nie zagraża działaniu aplikacji, usuń blokady ręcznie:
-
-```bash
-$ rm storage/app/locks/process-manager.lock*
-```
-
----
-
-## Process Manager
-
-Process Manager automatycznie wstrzymuje działanie na 10 minut przed końcem dnia, aby uniknąć kolizji w danych 
-fiskalnych i księgowych. Każda instancja działa maksymalnie 5 minut i kończy pracę, jeśli kolejna operacja 
-w kolejce nie została zaplanowana.
-
-W przypadku błędów oznaczonych jako `ERROR` lub `RETRY` Process Manager przerywa działanie i podejmuje ponowne próby 
-zgodnie z logiką `retry_after`.
-
----
-
-### Przegląd procesów
-
-Wszystkie procesy definiowane są w plikach *Process.php*, gdzie opisano ich logikę, statusy i kroki.
-
-Każda zmiana w tych plikach wymaga zwiększenia wersji procesu (`$version`), aby zapewnić poprawne odtwarzanie 
-zadań po aktualizacji.
-
----
-
-### Historia procesów
-
-Każdy proces posiada historię widoczną w [systemie](https://service.aelia.pl/nova/resources/processes). 
-Rejestrowane są wszystkie kroki procesu oraz payload wysyłany do zewnętrznych systemów.
-
----
-
-### Wznawianie procesów
-
-Procesy w statusach `ERROR` i `RETRY` mogą być wznowione przez:
-
-- Akcję na ekranie procesu ([example](https://service.aelia.pl/nova/resources/processes)).
-- Komendę:
-
-```bash
-php artisan process-manager:restart-process {id}
-```
-
----
-
-### Porzucanie procesów
-
-Nieukończony proces można porzucić, klikając ikonę obok przycisku „retry” (ikona może być ukryta). 
-Procesy porzucone są pomijane w kolejnych iteracjach.
-
----
-
-### Instrukcje ponawiania uszkodzonych procesów
-
-W przypadku problemów z procesami, administrator powinien przeanalizować błędy i zdecydować, czy wznowienie 
-nie spowoduje dodatkowych problemów. Jeśli jest to bezpieczne, można użyć:
-
-```bash
-php artisan process-manager:work {id}
-```
-
----
+# Komponent Laravel do obsługi procesów w środowisku mikroserwisów
 
 ## Instalacja
 
-Instrukcja dodania wymaganych konfiguracji:
-
-1. **Filesystem**:
+1. **Filesystem** – wymagany dysk `locks` dla mechanizmu blokad:
 
 ```php
 # config/filesystems.php
 'disks' => [
-    ...
     'locks' => [
         'driver' => 'local',
         'root' => storage_path('app/locks'),
@@ -189,12 +15,11 @@ Instrukcja dodania wymaganych konfiguracji:
 ],
 ```
 
-2. **Logowanie**:
+2. **Logowanie** – wymagany kanał `process-manager`:
 
 ```php
 # config/logging.php
 'channels' => [
-    ...
     'process-manager' => [
         'driver' => 'single',
         'path' => storage_path('logs/process-manager.log'),
@@ -206,7 +31,128 @@ Instrukcja dodania wymaganych konfiguracji:
 
 ---
 
-### Przykład klasy procesu
+## Konfiguracja
+
+Wszystkie poniższe wywołania umieszczamy w metodzie `boot()` service providera aplikacji.
+
+### Rejestracja procesów
+
+```php
+ProcessManagerFactory::registerProcesses([
+    NewOrderProcess::class => 'CREATE ORDER',
+    NewCreditMemoProcess::class => 'REFUND ORDER',
+    IssueCreditMemoProcess::class => 'ISSUE CREDIT MEMO',
+]);
+```
+
+### Uprawnienia panelu Nova
+
+Opcjonalne callbacki kontrolujące dostęp do zasobów w panelu Nova. Jeśli nie zostaną zdefiniowane, dostęp jest przyznawany domyślnie.
+
+- **`setViewResolver`** – określa, czy użytkownik może przeglądać listę i szczegóły procesów.
+- **`setManageResolver`** – określa, czy użytkownik może wykonywać akcje (restart, abort).
+
+```php
+ProcessManagerFactory::setViewResolver(function (\Illuminate\Http\Request $request): bool {
+    return $request->user()?->hasRole('admin') ?? false;
+});
+
+ProcessManagerFactory::setManageResolver(function (\Illuminate\Http\Request $request): bool {
+    return $request->user()?->hasPermission('process-manager.manage') ?? false;
+});
+```
+
+### Rejestracja komend (Command Status Resolver)
+
+```php
+CommandStatusResolver::registerCommands([
+    GetMagentoInvoices::class => 'Get Magento Invoices',
+    GetMagentoProducts::class => 'Get Magento Products',
+    ImportCostInvoicesToBooks::class => ['Import Cost Invoices to Books', ['service1', 'service2']],
+    IssueAllegroMagentoInvoices::class => ['Issue Magento Allegro Invoices', [10, 24]],
+]);
+```
+
+---
+
+## Architektura
+
+### Przepływ procesów
+
+```
+Process (PENDING) → process-manager:work CLI → ProcessManager::handle()
+  → przywrócenie stanu → walidacja wersji → boot()
+  → dla każdego kroku: beforeNextStep() → execute() → zapis wyniku
+  → SUCCESS | RETRY | ERROR | EXCEPTION
+```
+
+Kroki definiowane są w `AbstractProcess::STEPS` jako `['etykieta' => 'nazwaMetody']` lub `['etykieta' => TaskClass::class]`. Klasy zadań muszą implementować `ProcessTask` i zwracać `ProcessResult`.
+
+### Kluczowe klasy
+
+| Klasa | Rola |
+|---|---|
+| `src/ProcessManager.php` | Silnik wykonania — logika retry, timeout, cooldown, pętla kroków |
+| `src/Processes/AbstractProcess.php` | Klasa bazowa dla wszystkich procesów; definiuje STEPS, wersję, hooki |
+| `src/ProcessManagerFactory.php` | Rejestr procesów i resolver uprawnień Nova |
+| `src/Repositories/ProcessesRepository.php` | Zapytania DB — nextAvailableProcess, wykrywanie timeoutów |
+| `src/Lockdown/CommandLock.php` | Mechanizm blokad via `storage/app/locks/*.{lock,disabled,error}` |
+| `src/Models/Process.php` | Model Eloquent; polimorficzne `processable_type/id`, JSON `meta` |
+| `src/Models/ProcessStep.php` | Rekord audytu kroku z kolumnami JSON `details` i `logs` |
+| `src/ProcessLogger.php` | Fasada logowania (`ProcessLogger::`) — zapisuje do rekordu kroku |
+
+### Cykl życia procesu
+
+- **Statusy**: `PENDING` → `IN_PROGRESS` → `SUCCESS` / `ERROR` / `RETRY` / `EXCEPTION` / `SKIPPED`
+- **Retry**: wykładniczy backoff (`attempts * 60s`), maksymalnie 50 prób
+- **Timeout**: procesy `IN_PROGRESS` starsze niż 60 min automatycznie ustawiane na `RETRY`
+- **Cooldown dzienny**: automatyczne zatrzymanie 10 min przed północą
+- **Bezpieczeństwo wersji**: `$version` procesu walidowana przy przywracaniu stanu; niezgodność = wyjątek
+- **Skok do kroku**: ustaw `goto_step` w meta procesu, aby wznowić od konkretnego kroku
+
+### Blokady komend
+
+Pliki blokad w `storage/app/locks/`:
+
+| Plik | Działanie |
+|---|---|
+| `all-commands.disabled` | Wyłącza wszystkie komendy globalnie |
+| `{klucz}.disabled` | Wyłącza konkretną komendę |
+| `{klucz}.lock` | Blokada miękka (przedawniona po `softlock_time` sekund, domyślnie 30) |
+| `{klucz}.error` | Śledzi błędy krytyczne |
+
+Typowe klucze blokad: **`process-manager`** (~5 min).
+
+### Komendy CLI
+
+```bash
+# Uruchomienie workera (opcje: --channel=, --single, --restart, --force, --remove-lock, --skip-lock)
+php artisan process-manager:work [processId]
+
+# Wznowienie konkretnego procesu
+php artisan process-manager:restart-process {id}
+
+# Wyświetlenie stanu blokad
+php artisan lock:commands:status
+```
+
+### Multi-kanałowość
+
+Procesy posiadają pole `channel`. Przekaż `--channel=nazwa` do CLI, aby izolować workery per kanał. Kanały konfigurowane w `config/process-manager.php`.
+
+### Integracja Nova
+
+`src/Nova/` zawiera zasoby (`Process`, `ProcessStep`), akcje (`ReProcess`, `AbortProcess`), metryki i dashboardy. Rejestrowane automatycznie przez service provider, konfigurowane w `config/nova.php`.
+
+### Baza danych
+
+Dwie tabele: `processes` i `process_steps`. Migracja w `database/migrations/`. Para polimorficzna `processable_type/id` łączy proces z dowolnym modelem Eloquent.
+
+---
+
+## Przykład klasy procesu
+
+Każda zmiana logiki procesu wymaga zwiększenia `$version`, aby zapewnić poprawne odtwarzanie stanu po aktualizacji.
 
 ```php
 class DefaultProcess extends AbstractProcess implements Process
@@ -224,3 +170,82 @@ class DefaultProcess extends AbstractProcess implements Process
     }
 }
 ```
+
+---
+
+## Procedury operacyjne
+
+### Zatrzymanie działania
+
+_(W przypadku restartu aplikacji, bazy danych lub systemów zewnętrznych oraz przy planowanych przerwach)_
+
+```bash
+$ touch storage/app/locks/all-commands.disabled
+```
+
+Następnie sprawdź, czy wszystkie komendy mają status `DISABLED` lub `LOCKED`:
+
+```bash
+php artisan lock:commands:status
+```
+
+Jeśli którakolwiek komenda jest w stanie `Working`, odczekaj, aż zakończy działanie.
+
+---
+
+### Wznowienie działania systemu
+
+```bash
+$ rm storage/app/locks/all-commands.disabled
+```
+
+Upewnij się, że wszystkie komendy wróciły do statusu `Idle` lub `Working`.
+
+---
+
+### Zatrzymanie pojedynczej komendy
+
+_(Dla tymczasowych napraw lub odłączenia komendy nadrzędnej od zależnych procesów)_
+
+```bash
+$ touch storage/app/locks/process-manager.disabled
+```
+
+---
+
+### Wznowienie pojedynczej komendy
+
+```bash
+$ rm storage/app/locks/process-manager.disabled
+```
+
+---
+
+### Usunięcie przedawnionej blokady miękkiej
+
+Gdy komenda wyświetla status `LOCKED` po nieoczekiwanej przerwie w pracy:
+
+```bash
+$ rm storage/app/locks/process-manager.lock*
+```
+
+---
+
+### Wznawianie procesów w błędzie
+
+Procesy w statusach `ERROR` i `RETRY` można wznowić:
+
+- Akcją `Restart Process` na ekranie szczegółów procesu w panelu Nova.
+- Komendą CLI:
+
+```bash
+php artisan process-manager:restart-process {id}
+```
+
+Przed wznowieniem przeanalizuj logi, aby upewnić się, że ponowne wykonanie nie spowoduje problemów.
+
+---
+
+### Porzucanie procesów
+
+Nieukończony proces można porzucić akcją `Abort` w panelu Nova. Procesy porzucone (`ABORTED`) są pomijane w kolejnych iteracjach workera.

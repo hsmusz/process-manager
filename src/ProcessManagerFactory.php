@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Movecloser\ProcessManager;
 
 use Closure;
+use Illuminate\Http\Request;
 use InvalidArgumentException;
 use Movecloser\ProcessManager\Contracts\ProcessManager;
 use Movecloser\ProcessManager\Models\Process;
@@ -15,6 +16,8 @@ class ProcessManagerFactory
     protected static array $extraColumns = [];
     protected static array $processes = [];
     protected static ?Closure $userResolver = null;
+    protected static ?Closure $viewResolver = null;
+    protected static ?Closure $manageResolver = null;
 
     public static function addExtraColumns(array $extraColumns): void
     {
@@ -81,5 +84,33 @@ class ProcessManagerFactory
     public static function setUserResolver(callable $resolver): void
     {
         static::$userResolver = $resolver;
+    }
+
+    public static function setViewResolver(callable $resolver): void
+    {
+        static::$viewResolver = $resolver;
+    }
+
+    public static function setManageResolver(callable $resolver): void
+    {
+        static::$manageResolver = $resolver;
+    }
+
+    public static function canView(Request $request): bool
+    {
+        if (is_null(static::$viewResolver)) {
+            return true;
+        }
+
+        return (bool) (static::$viewResolver)($request);
+    }
+
+    public static function canManage(Request $request): bool
+    {
+        if (is_null(static::$manageResolver)) {
+            return true;
+        }
+
+        return (bool) (static::$manageResolver)($request);
     }
 }

@@ -48,16 +48,23 @@ class Process extends Resource
     {
         return [
             ReProcess::make()->icon('arrow-path')
-                ->onlyOnDetail(),
+                ->onlyOnDetail()
+                ->canSee(fn(Request $r) => ProcessManagerFactory::canManage($r)),
 
             AbortProcess::make()->icon('bolt-slash')
-                ->onlyOnDetail(),
+                ->onlyOnDetail()
+                ->canSee(fn(Request $r) => ProcessManagerFactory::canManage($r)),
         ];
     }
 
     public function authorizedToView(Request $request): bool
     {
-        return true;
+        return ProcessManagerFactory::canView($request);
+    }
+
+    public static function authorizedToViewAny(Request $request): bool
+    {
+        return ProcessManagerFactory::canView($request);
     }
 
     public function extraColumns(): array
