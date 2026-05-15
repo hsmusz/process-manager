@@ -108,7 +108,7 @@ Kroki definiowane są w `AbstractProcess::STEPS` jako `['etykieta' => 'nazwaMeto
 - **Timeout**: procesy `IN_PROGRESS` starsze niż 60 min automatycznie ustawiane na `RETRY`
 - **Cooldown dzienny**: automatyczne zatrzymanie 10 min przed północą
 - **Bezpieczeństwo wersji**: `$version` procesu walidowana przy przywracaniu stanu; niezgodność = wyjątek
-- **Skok do kroku**: ustaw `goto_step` w meta procesu, aby wznowić od konkretnego kroku
+- **Pomijanie kroku**: ustaw `skip_steps` w meta procesu, aby wskazać klucze kroków do pominięcia
 
 ### Blokady komend
 

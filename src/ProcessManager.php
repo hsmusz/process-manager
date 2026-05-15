@@ -23,7 +23,7 @@ class ProcessManager implements Contracts\ProcessManager
 {
     protected const int MAX_RETRIES = 50;
     protected const int RETRY_AFTER = 60; // in seconds
-    protected ?string $gotoStep = null;
+    protected array $skipSteps = [];
     protected ?string $nextStep = null;
     private Contracts\Process|Contracts\ProcessSteps $process;
 
@@ -128,16 +128,10 @@ class ProcessManager implements Contracts\ProcessManager
                 continue;
             }
 
-            if ($this->gotoStep !== null && !in_array($step, [AbstractProcess::START, AbstractProcess::FINISH])) {
-                $goto = array_search($this->gotoStep, $this->process->getSteps());
-                if ($goto !== false
-                    && $step !== $goto
-                    && !$this->process->isAfter($step, $goto)
-                ) {
-                    $this->persistStep($step, ProcessStatus::INFO, 'Skipping step', ['SKIPPED']);
-                    $this->prepareNextStep($step);
-                    continue;
-                }
+            if (in_array($step, $this->skipSteps)) {
+                $this->persistStep($step, ProcessStatus::INFO, 'Step marked as SKIP', ['SKIPPED']);
+                $this->prepareNextStep($step);
+                continue;
             }
 
             $this->log('Process | processing process ' . $this->model->id . ' step ' . $step);
@@ -184,10 +178,9 @@ class ProcessManager implements Contracts\ProcessManager
         );
         $this->process->validate();
 
-        $this->gotoStep = $this->model->meta['goto_step'] ?? null;
+        $this->skipSteps = $this->model->meta['skip_steps'] ?? [];
 
         $this->nextStep = $this->getNextStep();
-
         if (empty($this->nextStep)) {
             throw new ProcessException('No valid step found to resume Process');
         }

@@ -10,6 +10,19 @@ trait HasProcessSteps
     private array $steps;
     private array $stepsKeys;
 
+    public static function skipStepsUntilTask(string $gotoTask): array
+    {
+        $skipSteps = [];
+        foreach (static::STEPS as $step => $task) {
+            if ($task === $gotoTask) {
+                break;
+            }
+            $skipSteps[] = $step;
+        }
+
+        return ['skip_steps' => $skipSteps];
+    }
+
     public function getSteps(): array
     {
         if (!isset($this->steps)) {
