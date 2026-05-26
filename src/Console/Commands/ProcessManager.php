@@ -102,7 +102,7 @@ class ProcessManager extends Command
             sleep(1);
         }
 
-        $this->removeCommandLock();
+        CommandLock::removeLock($this->getLockKey());
 
         $this->info('Finished.');
 
