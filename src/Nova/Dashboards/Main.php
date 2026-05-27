@@ -11,6 +11,7 @@ use Laravel\Nova\Dashboards\Main as Dashboard;
 use Movecloser\ProcessManager\Console\Commands\ProcessManager;
 use Movecloser\ProcessManager\Lockdown\CommandLock;
 use Movecloser\ProcessManager\Lockdown\CommandStatusResolver;
+use Movecloser\ProcessManager\Lockdown\GlobalLock;
 use Movecloser\ProcessManager\Nova\Metrics\MaxProcessAttempts;
 use Movecloser\ProcessManager\Nova\Metrics\NewProcesses;
 
@@ -22,7 +23,7 @@ class Main extends Dashboard
     {
         $cards = [
             (new NovaSpacerCard())->width('full')->classes('bg-gray-100')->style('height: .5rem'),
-            (new NovaSingleValueCard('All commands', CommandLock::allCommandsDisabled() ? 'DISABLED' : 'Enabled'))->width('1/4'),
+            (new NovaSingleValueCard('All commands', GlobalLock::allDisabled() ? 'DISABLED' : 'Enabled'))->width('1/4'),
         ];
 
         $channels = config('process-manager.channels', ['default' => 'Process Manager']);

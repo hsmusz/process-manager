@@ -16,24 +16,15 @@ class CommandLock
 {
     private const int KEEP_LAST_N_LINES = 10;
 
-    public static function allCommandsDisabled(): bool
-    {
-        return self::storage()->exists('all-commands.disabled');
-    }
-
-    public static function commandDisabled(string $lockKey): bool
-    {
-        return self::allCommandsDisabled() || self::storage()->exists($lockKey . '.disabled');
-    }
-
-    /**
-     * @throws \Exception
-     */
     public static function delayAndLock(string $lockKey): void
     {
         $rand = random_int(100000, 1000000);
         Log::info(
-            sprintf('Command [%s]: Sleeping %d microseconds (%s seconds)', $lockKey, $rand, round($rand / 1000000, 2))
+            sprintf('Command [%s]: Sleeping %d microseconds (%s seconds)',
+                $lockKey,
+                $rand,
+                round($rand / 1000000, 2)
+            )
         );
         usleep($rand);
 

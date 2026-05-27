@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Movecloser\ProcessManager\Console\Commands;
 
 use Illuminate\Console\Command;
-use Movecloser\ProcessManager\Lockdown\CommandLock;
 use Movecloser\ProcessManager\Lockdown\CommandStatusResolver;
+use Movecloser\ProcessManager\Lockdown\GlobalLock;
 
 class CommandsStatus extends Command
 {
@@ -39,7 +39,7 @@ class CommandsStatus extends Command
 
     private function displaySystemStatus(): void
     {
-        $allDisabled = CommandLock::allCommandsDisabled() ? 'DISABLED' : 'Enabled';
+        $allDisabled = GlobalLock::allDisabled() ? 'DISABLED' : 'Enabled';
         $this->info(sprintf('1. All commands: %s', $allDisabled));
 
         $managerStatus = CommandStatusResolver::checkCommandStatus(ProcessManager::lockKey());

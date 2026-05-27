@@ -24,7 +24,7 @@ class CommandStatusResolver
             return self::COMMAND_STATUS_WORKING;
         }
 
-        if (CommandLock::commandDisabled($lockKey)) {
+        if (GlobalLock::isDisabled($lockKey)) {
             return self::COMMAND_STATUS_DISABLED;
         }
 

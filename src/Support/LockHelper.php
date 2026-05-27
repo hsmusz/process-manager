@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Movecloser\ProcessManager\Support;
 
 use Movecloser\ProcessManager\Lockdown\CommandLock;
+use Movecloser\ProcessManager\Lockdown\GlobalLock;
 use Throwable;
 
 trait LockHelper
@@ -22,32 +23,40 @@ trait LockHelper
         return $key . (!empty($param) ? ('-' . $param) : '');
     }
 
-    /**
-     * @throws \Exception
-     */
     protected function bootLock(): void
     {
-        if(empty($this->getLockKey())) {
+        if (empty($this->getLockKey())) {
             return;
         }
 
-        if ($this->shouldForceRemoveLock()) {
+        if (($this->hasOption('remove-command-lock') && $this->option('remove-command-lock'))
+            || ($this->hasOption('remove-lock') && $this->option('remove-lock'))) {
             CommandLock::removeLock($this->getLockKey());
         }
 
-        if ($this->shouldUseLock()) {
-            CommandLock::delayAndLock($this->getLockKey());
-            CommandLock::removeError($this->getLockKey());
+        if ($this->option('skip-command-lock')) {
+            return;
         }
+
+        CommandLock::delayAndLock($this->getLockKey());
+        CommandLock::removeError($this->getLockKey());
     }
 
     protected function commandDisabled(): bool
     {
-        if (empty($this->getLockKey()) || !$this->shouldUseLock()) {
+        if (empty($this->getLockKey())) {
             return false;
         }
 
-        return CommandLock::commandDisabled($this->getLockKey());
+        if ($this->hasOption('skip-lock') && $this->option('skip-lock')) {
+            return false;
+        }
+
+        if ($this->hasOption('skip-global-lock') && $this->option('skip-global-lock')) {
+            return false;
+        }
+
+        return GlobalLock::isDisabled($this->getLockKey());
     }
 
     protected function getLockKey(): ?string
@@ -68,27 +77,10 @@ trait LockHelper
 
     protected function removeCommandLock(): void
     {
-        if(empty($this->getLockKey())) {
+        if (empty($this->getLockKey())) {
             return;
         }
 
-        if ($this->shouldUseLock()) {
-            CommandLock::removeLock($this->getLockKey());
-        }
-    }
-
-    private function shouldForceRemoveLock(): bool
-    {
-        return $this->option('remove-lock');
-    }
-
-    private function shouldUseLock(): bool
-    {
-        $useLock = true;
-        if ($this->hasOption('skip-lock') && $this->option('skip-lock')) {
-            $useLock = false;
-        }
-
-        return $useLock;
+        CommandLock::removeLock($this->getLockKey());
     }
 }
