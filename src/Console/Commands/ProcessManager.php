@@ -17,7 +17,7 @@ class ProcessManager extends Command
 {
     use LockHelper;
 
-    protected const ?string COMMAND_LOCK_KEY = 'process-manager';
+    protected const string COMMAND_LOCK_KEY = 'process-manager';
 
     private const int DAILY_COOLDOWN = 10; // stop processing after END OF DAY minus 10 minutes
     private const int WORKER_LIFETIME = 5; // in minutes
@@ -29,9 +29,8 @@ class ProcessManager extends Command
                                 {--single : Run only one process}
                                 {--restart : Allow running process marked as error, exception, pending retry}
                                 {--force : force restart a process - works only with single process ID}
-                                {--remove-lock : Make process manager disregard any previous lock}
-                                {--skip-lock : Skip global lockdown}
-                                ';
+                                ' . AbstractLockableCommand::COMMAND_LOCK_OPTIONS;
+
     private string $channel;
     private ProcessesRepository $processes;
 
@@ -48,7 +47,7 @@ class ProcessManager extends Command
             return self::INVALID;
         }
 
-        if ($this->option('remove-lock')) {
+        if ($this->option('remove-command-lock') || $this->option('remove-lock')) {
             $this->removeCommandLock();
         }
 
@@ -62,7 +61,7 @@ class ProcessManager extends Command
         }
 
         // use simplified lock, to disable overlapping process workers
-        if (CommandLock::isLocked($this->getLockKey())) {
+        if (!$this->option('skip-command-lock') && CommandLock::isLocked($this->getLockKey())) {
             $this->info('Locked - other process worker is running.');
 
             return self::SUCCESS;
