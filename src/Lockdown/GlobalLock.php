@@ -6,6 +6,7 @@ namespace Movecloser\ProcessManager\Lockdown;
 
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class GlobalLock
 {
@@ -16,7 +17,7 @@ class GlobalLock
 
     public static function isDisabled(string $lockKey): bool
     {
-        return self::allDisabled() || self::storage()->exists($lockKey . '.disabled');
+        return self::allDisabled() || self::storage()->exists(Str::kebab($lockKey) . '.disabled');
     }
 
     private static function storage(): Filesystem

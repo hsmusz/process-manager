@@ -53,8 +53,10 @@ class LockHelperTest extends TestCase
         $input = new ArrayInput(
             $options,
             new InputDefinition([
+                new InputOption('skip-lock', null, InputOption::VALUE_NONE),
                 new InputOption('skip-global-lock', null, InputOption::VALUE_NONE),
                 new InputOption('skip-command-lock', null, InputOption::VALUE_NONE),
+                new InputOption('remove-lock', null, InputOption::VALUE_NONE),
                 new InputOption('remove-command-lock', null, InputOption::VALUE_NONE),
             ])
         );
@@ -99,5 +101,63 @@ class LockHelperTest extends TestCase
         $this->invokeProtectedMethod($command, 'removeCommandLock');
 
         $this->assertFalse(Storage::disk($this->disk)->exists('test-command.lock'));
+    }
+
+    public function test_boot_lock_creates_lock_without_flags(): void
+    {
+        $command = $this->makeCommand();
+
+        $this->invokeProtectedMethod($command, 'bootLock');
+
+        $this->assertTrue(Storage::disk($this->disk)->exists('test-command.lock'));
+    }
+
+    public function test_boot_lock_skip_command_lock_skips_lock_acquisition(): void
+    {
+        $command = $this->makeCommand(['--skip-command-lock' => true]);
+
+        $this->invokeProtectedMethod($command, 'bootLock');
+
+        $this->assertFalse(Storage::disk($this->disk)->exists('test-command.lock'));
+    }
+
+    public function test_boot_lock_remove_command_lock_removes_existing_lock(): void
+    {
+        Storage::disk($this->disk)->put('test-command.lock', 'stale-lock');
+
+        $command = $this->makeCommand(['--remove-command-lock' => true]);
+
+        $this->invokeProtectedMethod($command, 'bootLock');
+
+        $lockStillExists = Storage::disk($this->disk)->exists('test-command.lock');
+        $this->assertTrue($lockStillExists, 'Lock should be re-acquired after removal');
+    }
+
+    public function test_boot_lock_remove_lock_bc_alias_removes_existing_lock(): void
+    {
+        Storage::disk($this->disk)->put('test-command.lock', 'stale-lock');
+
+        $command = $this->makeCommand(['--remove-lock' => true]);
+
+        $this->invokeProtectedMethod($command, 'bootLock');
+
+        $this->assertTrue(Storage::disk($this->disk)->exists('test-command.lock'));
+    }
+
+    public function test_boot_lock_skip_command_lock_overrides_remove(): void
+    {
+        Storage::disk($this->disk)->put('test-command.lock', 'stale-lock');
+
+        $command = $this->makeCommand([
+            '--remove-command-lock' => true,
+            '--skip-command-lock' => true,
+        ]);
+
+        $this->invokeProtectedMethod($command, 'bootLock');
+
+        $this->assertFalse(
+            Storage::disk($this->disk)->exists('test-command.lock'),
+            'Lock should be removed by --remove-command-lock and not re-acquired due to --skip-command-lock'
+        );
     }
 }

@@ -29,7 +29,8 @@ trait LockHelper
             return;
         }
 
-        if ($this->option('remove-command-lock') || $this->option('remove-lock')) {
+        if (($this->hasOption('remove-command-lock') && $this->option('remove-command-lock'))
+            || ($this->hasOption('remove-lock') && $this->option('remove-lock'))) {
             CommandLock::removeLock($this->getLockKey());
         }
 
