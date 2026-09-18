@@ -28,6 +28,7 @@ Laravel 12 package (`movecloser/process-manager`) — autoloaded from `src/`, PS
 | `src/Lockdown/GlobalLock.php` | Global/per-command `.disabled` check |
 | `src/Lockdown/CommandStatusResolver.php` | Resolves Idle/Working/DISABLED/LOCKED/ERROR per lock key |
 | `src/Support/LockHelper.php` | Trait: `bootLock()`, `commandDisabled()`, `removeCommandLock()` |
+| `src/Support/ErrorMessage.php` | Sanitizes error text stored in `.error` files and rendered on the dashboard |
 | `src/ProcessManager.php` | Execution engine: retry, timeout, step loop |
 | `src/ProcessManagerFactory.php` | Static registry for process classes + Nova permission resolvers |
 | `src/Models/Process.php` | Eloquent model, polymorphic `processable_type/id` |

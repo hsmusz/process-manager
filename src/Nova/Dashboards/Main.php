@@ -14,6 +14,7 @@ use Movecloser\ProcessManager\Lockdown\CommandStatusResolver;
 use Movecloser\ProcessManager\Lockdown\GlobalLock;
 use Movecloser\ProcessManager\Nova\Metrics\MaxProcessAttempts;
 use Movecloser\ProcessManager\Nova\Metrics\NewProcesses;
+use Movecloser\ProcessManager\Support\ErrorMessage;
 
 class Main extends Dashboard
 {
@@ -93,7 +94,12 @@ class Main extends Dashboard
 
         $errors = CommandLock::getError($lockKey);
         if (!empty($errors)) {
-            $errors = self::HR_LINE . str_replace("\n", self::HR_LINE, $errors);
+            $lines = array_map(
+                static fn(string $line): string => e(ErrorMessage::plain($line)),
+                explode("\n", $errors)
+            );
+
+            $errors = self::HR_LINE . implode(self::HR_LINE, $lines);
         }
 
         $last = CommandLock::lastExecutionDate($lockKey);

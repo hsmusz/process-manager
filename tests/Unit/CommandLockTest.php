@@ -80,6 +80,18 @@ class CommandLockTest extends TestCase
         $this->assertStringContainsString('error message', CommandLock::getError('test-command'));
     }
 
+    public function test_error_stores_message_as_single_plain_text_line(): void
+    {
+        CommandLock::lock('test-command');
+        CommandLock::error('test-command', "Api Error: <html>\r\n<center><h1>502 Bad Gateway</h1></center>\r\n</html>");
+
+        $stored = CommandLock::getError('test-command');
+
+        $this->assertStringNotContainsString('<', $stored);
+        $this->assertStringNotContainsString("\r", $stored);
+        $this->assertStringEndsWith('Api Error: 502 Bad Gateway', $stored);
+    }
+
     public function test_is_outdated_lock_returns_false_for_fresh_lock(): void
     {
         config()->set('process-manager.softlock_time', 30);
