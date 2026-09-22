@@ -133,11 +133,9 @@ class CommandLockTest extends TestCase
 
         $log = CommandLock::errorLog('test-command');
 
-        $this->assertSame(['[2024-01-01 10:00:05] fresh one'], $log['current']);
-        $this->assertSame([
-            '[2024-01-01 08:00:00] old one',
-            '[2024-01-01 09:00:00] old two',
-        ], $log['previous']);
+        $this->assertSame(['fresh one'], array_column($log['current'], 'message'));
+        $this->assertSame(['old one', 'old two'], array_column($log['previous'], 'message'));
+        $this->assertSame('2024-01-01 10:00:05', $log['current'][0]['at']->format('Y-m-d H:i:s'));
     }
 
     public function test_error_log_treats_all_entries_as_current_without_execution_date(): void
@@ -146,8 +144,38 @@ class CommandLockTest extends TestCase
 
         $log = CommandLock::errorLog('test-command');
 
-        $this->assertSame(['[2024-01-01 08:00:00] boom'], $log['current']);
+        $this->assertSame(['boom'], array_column($log['current'], 'message'));
         $this->assertEmpty($log['previous']);
+    }
+
+    public function test_error_log_merges_continuation_lines_into_one_entry(): void
+    {
+        Storage::disk($this->disk)->put('test-command.lock.execution', '2024-01-01 10:00:00');
+        Storage::disk($this->disk)->put(
+            'test-command.error',
+            "[2024-01-01 10:00:05] Api Error: HTTP/1.1 502\rServer: nginx\r502 Bad Gateway"
+        );
+
+        $log = CommandLock::errorLog('test-command');
+
+        $this->assertCount(1, $log['current']);
+        $this->assertEmpty($log['previous']);
+        $this->assertSame(
+            'Api Error: HTTP/1.1 502 Server: nginx 502 Bad Gateway',
+            $log['current'][0]['message']
+        );
+    }
+
+    public function test_error_log_keeps_entry_without_date_out_of_last_execution(): void
+    {
+        Storage::disk($this->disk)->put('test-command.lock.execution', '2024-01-01 10:00:00');
+        Storage::disk($this->disk)->put('test-command.error', 'plain garbage without a date');
+
+        $log = CommandLock::errorLog('test-command');
+
+        $this->assertEmpty($log['current']);
+        $this->assertSame(['plain garbage without a date'], array_column($log['previous'], 'message'));
+        $this->assertNull($log['previous'][0]['at']);
     }
 
     public function test_error_log_is_empty_without_error_file(): void

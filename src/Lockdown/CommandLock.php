@@ -69,24 +69,24 @@ class CommandLock
     }
 
     /**
-     * @return array{current: array<int, string>, previous: array<int, string>}
+     * @return array{
+     *     current: array<int, array{at: ?\Carbon\Carbon, message: string}>,
+     *     previous: array<int, array{at: ?\Carbon\Carbon, message: string}>
+     * }
      */
     public static function errorLog(string $lockKey): array
     {
-        $entries = self::retrieveErrorLog($lockKey);
-        if (empty($entries)) {
-            return ['current' => [], 'previous' => []];
-        }
-
         $lastExecution = self::lastExecution($lockKey);
-        if (!$lastExecution) {
-            return ['current' => $entries, 'previous' => []];
-        }
-
         $log = ['current' => [], 'previous' => []];
-        foreach ($entries as $entry) {
-            $date = self::entryDate($entry);
-            $log[$date?->greaterThanOrEqualTo($lastExecution) ? 'current' : 'previous'][] = $entry;
+
+        foreach (self::retrieveErrorLog($lockKey) as $entry) {
+            $at = self::entryDate($entry);
+            $current = !$lastExecution || $at?->greaterThanOrEqualTo($lastExecution);
+
+            $log[$current ? 'current' : 'previous'][] = [
+                'at' => $at,
+                'message' => self::entryMessage($entry),
+            ];
         }
 
         return $log;
@@ -178,6 +178,11 @@ class CommandLock
         }
     }
 
+    private static function entryMessage(string $entry): string
+    {
+        return preg_replace('/^\[[^\]]+\]\s*/', '', $entry, 1) ?? $entry;
+    }
+
     private static function getErrorLockFilename(string $lockKey): string
     {
         return Str::kebab($lockKey) . '.error';
@@ -206,8 +211,26 @@ class CommandLock
     private static function retrieveErrorLog(string $lockKey): array
     {
         $errorData = self::storage()->get(self::getErrorLockFilename($lockKey));
+        if (!$errorData) {
+            return [];
+        }
 
-        return $errorData ? preg_split('/\R/u', $errorData) : [];
+        $entries = [];
+        foreach (preg_split('/\R/u', $errorData) as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+
+            // wpisy sprzed 1.3.1 bywaja wielolinijkowe - linia bez [daty] to dalszy ciag poprzedniej
+            if (empty($entries) || self::entryDate($line)) {
+                $entries[] = $line;
+                continue;
+            }
+
+            $entries[array_key_last($entries)] .= ' ' . trim($line);
+        }
+
+        return $entries;
     }
 
     private static function storage(): Filesystem
