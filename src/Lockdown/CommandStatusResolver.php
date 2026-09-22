@@ -28,7 +28,7 @@ class CommandStatusResolver
             return self::COMMAND_STATUS_DISABLED;
         }
 
-        if (CommandLock::hasError($lockKey)) {
+        if (CommandLock::failedLastExecution($lockKey)) {
             return self::COMMAND_STATUS_ERROR;
         }
 

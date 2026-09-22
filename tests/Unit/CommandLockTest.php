@@ -105,4 +105,56 @@ class CommandLockTest extends TestCase
         $this->assertFalse(method_exists(CommandLock::class, 'allCommandsDisabled'));
         $this->assertFalse(method_exists(CommandLock::class, 'commandDisabled'));
     }
+
+    public function test_failed_last_execution_returns_true_when_error_comes_from_last_run(): void
+    {
+        Storage::disk($this->disk)->put('test-command.lock.execution', '2024-01-01 10:00:00');
+        Storage::disk($this->disk)->put('test-command.error', '[2024-01-01 10:00:05] boom');
+
+        $this->assertTrue(CommandLock::failedLastExecution('test-command'));
+    }
+
+    public function test_failed_last_execution_returns_false_when_errors_are_older_than_last_run(): void
+    {
+        Storage::disk($this->disk)->put('test-command.lock.execution', '2024-01-01 10:00:00');
+        Storage::disk($this->disk)->put('test-command.error', '[2024-01-01 09:00:05] boom');
+
+        $this->assertFalse(CommandLock::failedLastExecution('test-command'));
+    }
+
+    public function test_error_log_splits_entries_by_last_execution(): void
+    {
+        Storage::disk($this->disk)->put('test-command.lock.execution', '2024-01-01 10:00:00');
+        Storage::disk($this->disk)->put('test-command.error', implode(PHP_EOL, [
+            '[2024-01-01 08:00:00] old one',
+            '[2024-01-01 09:00:00] old two',
+            '[2024-01-01 10:00:05] fresh one',
+        ]));
+
+        $log = CommandLock::errorLog('test-command');
+
+        $this->assertSame(['[2024-01-01 10:00:05] fresh one'], $log['current']);
+        $this->assertSame([
+            '[2024-01-01 08:00:00] old one',
+            '[2024-01-01 09:00:00] old two',
+        ], $log['previous']);
+    }
+
+    public function test_error_log_treats_all_entries_as_current_without_execution_date(): void
+    {
+        Storage::disk($this->disk)->put('test-command.error', '[2024-01-01 08:00:00] boom');
+
+        $log = CommandLock::errorLog('test-command');
+
+        $this->assertSame(['[2024-01-01 08:00:00] boom'], $log['current']);
+        $this->assertEmpty($log['previous']);
+    }
+
+    public function test_error_log_is_empty_without_error_file(): void
+    {
+        $log = CommandLock::errorLog('test-command');
+
+        $this->assertEmpty($log['current']);
+        $this->assertEmpty($log['previous']);
+    }
 }

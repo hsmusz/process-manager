@@ -19,6 +19,7 @@ use Movecloser\ProcessManager\Support\ErrorMessage;
 class Main extends Dashboard
 {
     private const string HR_LINE = '<hr style="margin: 10px 0" />';
+    private const string PREVIOUS_ERRORS_LABEL = 'previous errors:';
 
     public function cards(): array
     {
@@ -92,25 +93,44 @@ class Main extends Dashboard
             CommandStatusResolver::COMMAND_STATUS_ERROR => ['exclamation-circle', 'red'],
         };
 
-        $errors = CommandLock::getError($lockKey);
-        if (!empty($errors)) {
-            $lines = array_map(
-                static fn(string $line): string => e(ErrorMessage::plain($line)),
-                explode("\n", $errors)
-            );
-
-            $errors = self::HR_LINE . implode(self::HR_LINE, $lines);
-        }
+        $errors = CommandLock::errorLog($lockKey);
 
         $last = CommandLock::lastExecutionDate($lockKey);
         if (!empty($last)) {
-            $last = '<div class="font-size: 10px;">last execution: ' . $last . '</div>';
+            $last = '<div style="font-size: 10px;">last execution: ' . $last . '</div>';
         }
 
         $card->addItem(
             icon: $meta[0],
             title: $title . (!empty($param) ? ' (' . $param . ')' : ''),
-            content: $last . sprintf('<div style="word-break: break-all"><strong style="color: %s;">%s</strong>%s</div>', $meta[1], $status, $errors)
+            content: $last . sprintf(
+                '<div style="word-break: break-all"><strong style="color: %s;">%s</strong>%s%s</div>',
+                $meta[1],
+                $status,
+                $this->errorList($errors['current']),
+                $this->errorList($errors['previous'], self::PREVIOUS_ERRORS_LABEL)
+            )
         );
+    }
+
+    /**
+     * @param array<int, string> $entries
+     */
+    private function errorList(array $entries, string $label = ''): string
+    {
+        if (empty($entries)) {
+            return '';
+        }
+
+        $items = array_map(
+            static fn(string $entry): string => e(ErrorMessage::plain($entry)),
+            $entries
+        );
+
+        if (!empty($label)) {
+            array_unshift($items, $label);
+        }
+
+        return self::HR_LINE . implode(self::HR_LINE, $items);
     }
 }

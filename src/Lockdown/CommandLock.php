@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Movecloser\ProcessManager\Lockdown\Mail\Lockdown as LockdownMail;
 use Movecloser\ProcessManager\Support\ErrorMessage;
+use Throwable;
 
 class CommandLock
 {
@@ -67,6 +68,35 @@ class CommandLock
         self::storage()->put(self::getErrorLockFilename($lockKey), implode("\n", $errors));
     }
 
+    /**
+     * @return array{current: array<int, string>, previous: array<int, string>}
+     */
+    public static function errorLog(string $lockKey): array
+    {
+        $entries = self::retrieveErrorLog($lockKey);
+        if (empty($entries)) {
+            return ['current' => [], 'previous' => []];
+        }
+
+        $lastExecution = self::lastExecution($lockKey);
+        if (!$lastExecution) {
+            return ['current' => $entries, 'previous' => []];
+        }
+
+        $log = ['current' => [], 'previous' => []];
+        foreach ($entries as $entry) {
+            $date = self::entryDate($entry);
+            $log[$date?->greaterThanOrEqualTo($lastExecution) ? 'current' : 'previous'][] = $entry;
+        }
+
+        return $log;
+    }
+
+    public static function failedLastExecution(string $lockKey): bool
+    {
+        return !empty(self::errorLog($lockKey)['current']);
+    }
+
     public static function getError(string $lockKey): ?string
     {
         return self::storage()->get(self::getErrorLockFilename($lockKey));
@@ -89,9 +119,14 @@ class CommandLock
         return Carbon::now()->isAfter($lockDate?->addSeconds(config('process-manager.softlock_time')));
     }
 
+    public static function lastExecution(string $lockKey): ?Carbon
+    {
+        return Carbon::make(self::storage()->get(self::getExecutionFilename($lockKey)));
+    }
+
     public static function lastExecutionDate(string $lockKey): string
     {
-        return Carbon::make(self::storage()->get(self::getSoftLockFilename($lockKey) . '.execution'))?->format('Y-m-d H:i:s') ?? '';
+        return self::lastExecution($lockKey)?->format('Y-m-d H:i:s') ?? '';
     }
 
     public static function lock(string $lockKey): void
@@ -114,8 +149,7 @@ class CommandLock
         $errors = array_slice($errors, 0 - self::KEEP_LAST_N_LINES);
         $errors = array_filter(
             $errors,
-            static fn($val) => Carbon::parse(substr($val, 1, (strpos($val, ']') - 1)))
-                ->isAfter(Carbon::now()->subHours(72))
+            static fn($val) => self::entryDate($val)?->isAfter(Carbon::now()->subHours(72)) ?? false
         );
 
         if (empty($errors)) {
@@ -131,9 +165,27 @@ class CommandLock
         self::storage()->delete(self::getSoftLockNotificationFilename($lockKey));
     }
 
+    private static function entryDate(string $entry): ?Carbon
+    {
+        if (!preg_match('/^\[([^\]]+)\]/', $entry, $matches)) {
+            return null;
+        }
+
+        try {
+            return Carbon::make($matches[1]);
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
     private static function getErrorLockFilename(string $lockKey): string
     {
         return Str::kebab($lockKey) . '.error';
+    }
+
+    private static function getExecutionFilename(string $lockKey): string
+    {
+        return self::getSoftLockFilename($lockKey) . '.execution';
     }
 
     private static function getSoftLockFilename(string $lockKey): string
@@ -148,14 +200,14 @@ class CommandLock
 
     private static function markAsStarted(string $lockKey): void
     {
-        self::storage()->put(self::getSoftLockFilename($lockKey) . '.execution', Carbon::now());
+        self::storage()->put(self::getExecutionFilename($lockKey), Carbon::now());
     }
 
     private static function retrieveErrorLog(string $lockKey): array
     {
         $errorData = self::storage()->get(self::getErrorLockFilename($lockKey));
 
-        return $errorData ? explode(PHP_EOL, $errorData) : [];
+        return $errorData ? preg_split('/\R/u', $errorData) : [];
     }
 
     private static function storage(): Filesystem
