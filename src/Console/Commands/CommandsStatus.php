@@ -42,8 +42,10 @@ class CommandsStatus extends Command
         $allDisabled = GlobalLock::allDisabled() ? 'DISABLED' : 'Enabled';
         $this->info(sprintf('1. All commands: %s', $allDisabled));
 
-        $managerStatus = CommandStatusResolver::checkCommandStatus(ProcessManager::lockKey());
-        $this->info(sprintf('2. Process Manager: %s', $managerStatus));
+        foreach (config('process-manager.channels', ['default' => 'Process Manager']) as $channel => $name) {
+            $managerStatus = CommandStatusResolver::checkCommandStatus(ProcessManager::lockKey($channel));
+            $this->info(sprintf('2. %s: %s', $name, $managerStatus));
+        }
     }
 
     private function renderCommandStatus(string $commandClass, string|array $config): void

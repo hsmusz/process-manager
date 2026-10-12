@@ -99,6 +99,7 @@ class ProcessesRepository implements Contract
     public function restartTimeoutProcess(string $channel): void
     {
         $process = Process::where('status', ProcessStatus::IN_PROGRESS)
+            ->where('updated_at', '<', now()->subSeconds(self::PROCESS_TTL))
             ->where('channel', $channel)
             ->firstOrFail();
 
