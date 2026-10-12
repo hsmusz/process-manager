@@ -139,6 +139,8 @@ php artisan lock:commands:status
 ### Multi-kanałowość
 
 Procesy posiadają pole `channel`. Przekaż `--channel=nazwa` do CLI, aby izolować workery per kanał. Kanały konfigurowane w `config/process-manager.php`.
+Proces uruchamiany po ID (`process-manager:work {id}`) musi należeć do kanału z `--channel` (domyślnie `default`), inaczej worker odmawia.
+Blokada workera ma klucz `process-manager-{kanał}`, np. `process-manager-default.lock`.
 
 ### Integracja Nova
 
@@ -226,7 +228,7 @@ $ rm storage/app/locks/process-manager.disabled
 Gdy komenda wyświetla status `LOCKED` po nieoczekiwanej przerwie w pracy:
 
 ```bash
-$ rm storage/app/locks/process-manager.lock*
+$ rm storage/app/locks/process-manager-default.lock*
 ```
 
 ---

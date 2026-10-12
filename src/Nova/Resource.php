@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Movecloser\ProcessManager\Nova;
 
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Laravel\Nova\Http\Requests\NovaRequest;
 use Laravel\Nova\Resource as NovaResource;
 
@@ -22,6 +24,22 @@ abstract class Resource extends NovaResource
     public static array $sort = [
         'id' => 'asc',
     ];
+
+    // bez Policy Nova nie sprawdza szczegółu ani zapisu w API, a bool authorizedTo* działa tylko w UI
+    public function authorizeToReplicate(Request $request): void
+    {
+        throw_unless($this->authorizedToReplicate($request), AuthorizationException::class);
+    }
+
+    public function authorizeToUpdate(Request $request): void
+    {
+        throw_unless($this->authorizedToUpdate($request), AuthorizationException::class);
+    }
+
+    public function authorizeToView(Request $request): void
+    {
+        throw_unless($this->authorizedToView($request), AuthorizationException::class);
+    }
 
     public static function indexQuery(NovaRequest $request, $query): Builder
     {

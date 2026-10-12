@@ -206,7 +206,12 @@ class ProcessManager implements Contracts\ProcessManager
      */
     private function getNextStep(): ?string
     {
-        if ($this->model->steps()->where('step', AbstractProcess::FINISH)->exists()) {
+        $finished = $this->model->steps()
+            ->where('step', AbstractProcess::FINISH)
+            ->where('status', ProcessStatus::SUCCESS)
+            ->exists();
+
+        if ($finished) {
             throw new ProcessException('Process already finished.', [], ProcessStatus::INFO);
         }
 

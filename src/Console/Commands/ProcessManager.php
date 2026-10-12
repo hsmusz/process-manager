@@ -99,6 +99,17 @@ class ProcessManager extends Command
             }
 
             sleep(1);
+
+            if ($this->commandDisabled()) {
+                $this->info('Command disabled');
+                break;
+            }
+
+            // blokada nie chroni przed --skip-command-lock ani przed instancją wiszącą po PROCESS_TTL
+            if ($this->processes->isRunning($this->channel)) {
+                $this->error('Other process is running');
+                break;
+            }
         }
 
         CommandLock::removeLock($this->getLockKey());
@@ -120,6 +131,12 @@ class ProcessManager extends Command
     {
         if ($this->argument('processId')) {
             $process = $this->processes->find((int) $this->argument('processId'));
+            if ($process->channel !== $this->channel) {
+                $this->error(sprintf('Process %d belongs to channel [%s], use --channel=%s', $process->id, $process->channel, $process->channel));
+
+                return self::INVALID;
+            }
+
             if ($process->hasFinished() && !$this->option('force')) {
                 $this->error('Process already finished.');
 
