@@ -25,7 +25,7 @@ class ProcessManager extends Command
     protected $description = 'Handling of new processes ';
     protected $signature = 'process-manager:work
                                 {processId? : (optional) Run any process that is NOT finished - do not check for error/retry timeout}
-                                {--channel=default : Channel to run process on}
+                                {--channel= : (required) Channel to run process on}
                                 {--single : Run only one process}
                                 {--restart : Allow running process marked as error, exception, pending retry}
                                 {--force : force restart a process - works only with single process ID}
@@ -41,6 +41,12 @@ class ProcessManager extends Command
      */
     public function handle(ProcessesRepository $processes): int
     {
+        if (blank($this->option('channel'))) {
+            $this->error('Missing --channel option');
+
+            return self::INVALID;
+        }
+
         if ($this->commandDisabled()) {
             $this->info('Command disabled');
 

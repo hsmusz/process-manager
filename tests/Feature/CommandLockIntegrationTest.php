@@ -43,7 +43,7 @@ class CommandLockIntegrationTest extends TestCase
 
     public function test_work_command_creates_and_removes_lock(): void
     {
-        $this->artisan('process-manager:work')
+        $this->artisan('process-manager:work', ['--channel' => 'default'])
             ->assertSuccessful();
 
         $this->assertFalse(
@@ -56,7 +56,7 @@ class CommandLockIntegrationTest extends TestCase
     {
         Storage::disk($this->disk)->put('all-commands.disabled', '');
 
-        $this->artisan('process-manager:work')
+        $this->artisan('process-manager:work', ['--channel' => 'default'])
             ->assertExitCode(Command::INVALID);
     }
 
@@ -64,7 +64,7 @@ class CommandLockIntegrationTest extends TestCase
     {
         Storage::disk($this->disk)->put('all-commands.disabled', '');
 
-        $this->artisan('process-manager:work', ['--skip-global-lock' => true])
+        $this->artisan('process-manager:work', ['--channel' => 'default', '--skip-global-lock' => true])
             ->assertSuccessful();
     }
 
@@ -72,7 +72,7 @@ class CommandLockIntegrationTest extends TestCase
     {
         Storage::disk($this->disk)->put('all-commands.disabled', '');
 
-        $this->artisan('process-manager:work', ['--skip-lock' => true])
+        $this->artisan('process-manager:work', ['--channel' => 'default', '--skip-lock' => true])
             ->assertSuccessful();
     }
 
@@ -80,7 +80,7 @@ class CommandLockIntegrationTest extends TestCase
     {
         CommandLock::lock($this->lockKey);
 
-        $this->artisan('process-manager:work')
+        $this->artisan('process-manager:work', ['--channel' => 'default'])
             ->assertSuccessful();
 
         $this->assertTrue(
@@ -93,7 +93,7 @@ class CommandLockIntegrationTest extends TestCase
     {
         CommandLock::lock($this->lockKey);
 
-        $this->artisan('process-manager:work', ['--skip-command-lock' => true])
+        $this->artisan('process-manager:work', ['--channel' => 'default', '--skip-command-lock' => true])
             ->assertSuccessful();
 
         $this->assertFalse(
@@ -106,7 +106,7 @@ class CommandLockIntegrationTest extends TestCase
     {
         CommandLock::lock($this->lockKey);
 
-        $this->artisan('process-manager:work', ['--remove-command-lock' => true])
+        $this->artisan('process-manager:work', ['--channel' => 'default', '--remove-command-lock' => true])
             ->assertSuccessful();
 
         $this->assertFalse(
@@ -119,7 +119,7 @@ class CommandLockIntegrationTest extends TestCase
     {
         CommandLock::lock($this->lockKey);
 
-        $this->artisan('process-manager:work', ['--remove-lock' => true])
+        $this->artisan('process-manager:work', ['--channel' => 'default', '--remove-lock' => true])
             ->assertSuccessful();
 
         $this->assertFalse(
@@ -134,6 +134,7 @@ class CommandLockIntegrationTest extends TestCase
         CommandLock::lock($this->lockKey);
 
         $this->artisan('process-manager:work', [
+            '--channel' => 'default',
             '--skip-global-lock' => true,
             '--skip-command-lock' => true,
         ])->assertSuccessful();
@@ -162,10 +163,10 @@ class CommandLockIntegrationTest extends TestCase
     {
         Storage::disk($this->disk)->put($this->lockKey . '.disabled', '');
 
-        $this->artisan('process-manager:work')
+        $this->artisan('process-manager:work', ['--channel' => 'default'])
             ->assertExitCode(Command::INVALID);
 
-        $this->artisan('process-manager:work', ['--skip-global-lock' => true])
+        $this->artisan('process-manager:work', ['--channel' => 'default', '--skip-global-lock' => true])
             ->assertSuccessful();
     }
 }

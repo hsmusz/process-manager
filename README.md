@@ -126,8 +126,8 @@ Typowe klucze blokad: **`process-manager`** (~5 min).
 ### Komendy CLI
 
 ```bash
-# Uruchomienie workera (opcje: --channel=, --single, --restart, --force, --remove-lock, --skip-lock)
-php artisan process-manager:work [processId]
+# Uruchomienie workera (wymagane --channel=; opcje: --single, --restart, --force, --remove-lock, --skip-lock)
+php artisan process-manager:work [processId] --channel=default
 
 # Wznowienie konkretnego procesu
 php artisan process-manager:restart-process {id}
@@ -138,8 +138,8 @@ php artisan lock:commands:status
 
 ### Multi-kanałowość
 
-Procesy posiadają pole `channel`. Przekaż `--channel=nazwa` do CLI, aby izolować workery per kanał. Kanały konfigurowane w `config/process-manager.php`.
-Proces uruchamiany po ID (`process-manager:work {id}`) musi należeć do kanału z `--channel` (domyślnie `default`), inaczej worker odmawia.
+Procesy posiadają pole `channel`. `--channel=nazwa` jest wymagane w `process-manager:work` - brak domyślnego kanału, żeby nie uruchomić/restartować procesów innego kanału przez pomyłkę. Kanały konfigurowane w `config/process-manager.php`.
+Proces uruchamiany po ID (`process-manager:work {id}`) musi należeć do kanału z `--channel`, inaczej worker odmawia.
 Blokada workera ma klucz `process-manager-{kanał}`, np. `process-manager-default.lock`.
 
 ### Integracja Nova

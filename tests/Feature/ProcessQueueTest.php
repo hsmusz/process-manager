@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use Illuminate\Console\Command;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -76,11 +77,22 @@ class ProcessQueueTest extends TestCase
         $this->assertSame(0, FakeProcess::$finished);
     }
 
+    public function test_worker_requires_channel(): void
+    {
+        $process = $this->createProcess(ProcessStatus::PENDING);
+
+        $this->artisan('process-manager:work', ['processId' => $process->id])
+            ->expectsOutputToContain('Missing --channel option')
+            ->assertExitCode(Command::INVALID);
+
+        $this->assertSame(ProcessStatus::PENDING, $process->fresh()->status);
+    }
+
     public function test_worker_refuses_process_from_another_channel(): void
     {
         $process = $this->createProcess(ProcessStatus::PENDING, [], 'tcpos');
 
-        $this->artisan('process-manager:work', ['processId' => $process->id])
+        $this->artisan('process-manager:work', ['processId' => $process->id, '--channel' => 'default'])
             ->expectsOutputToContain('belongs to channel [tcpos]')
             ->assertSuccessful();
 
@@ -93,7 +105,7 @@ class ProcessQueueTest extends TestCase
         $second = $this->createProcess(ProcessStatus::PENDING);
         FakeProcess::$onStep = fn() => $this->createProcess(ProcessStatus::IN_PROGRESS);
 
-        $this->artisan('process-manager:work')->assertSuccessful();
+        $this->artisan('process-manager:work', ['--channel' => 'default'])->assertSuccessful();
 
         $this->assertSame(ProcessStatus::PENDING, $second->fresh()->status);
     }
@@ -104,7 +116,7 @@ class ProcessQueueTest extends TestCase
         $second = $this->createProcess(ProcessStatus::PENDING);
         FakeProcess::$onStep = static fn() => Storage::disk('locks')->put('all-commands.disabled', '');
 
-        $this->artisan('process-manager:work')->assertSuccessful();
+        $this->artisan('process-manager:work', ['--channel' => 'default'])->assertSuccessful();
 
         $this->assertSame(ProcessStatus::PENDING, $second->fresh()->status);
     }

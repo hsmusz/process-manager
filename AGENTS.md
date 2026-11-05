@@ -49,7 +49,7 @@ BC flag aliases: `--skip-lock` → `--skip-global-lock`, `--remove-lock` → `--
 ## CLI commands
 
 ```bash
-php artisan process-manager:work [processId] {--channel=} {--single} {--restart} {--force} {--skip-global-lock} {--skip-command-lock} {--remove-command-lock}
+php artisan process-manager:work [processId] --channel=<required> {--single} {--restart} {--force} {--skip-global-lock} {--skip-command-lock} {--remove-command-lock}
 php artisan process-manager:restart-process {id}
 php artisan lock:commands:status
 ```
