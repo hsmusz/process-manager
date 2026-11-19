@@ -100,6 +100,7 @@ class ProcessManager implements Contracts\ProcessManager
 
             if ($this->model->attempts === config('process-manager.notify_on_retry_attempts')) {
                 $this->notify(
+                    config('app.notify_on_error'),
                     config('app.name') . ' - PROCESS MANAGER RETRY',
                     sprintf(
                         'Process %d [%s] failed %d times and is still retrying: %s',
@@ -115,6 +116,7 @@ class ProcessManager implements Contracts\ProcessManager
         } else {
             $this->setStatus($status);
             $this->notify(
+                config('process-manager.notify_on_lockdown'),
                 config('app.name') . ' - PROCESS MANAGER LOCKDOWN!',
                 $e->getMessage(),
                 Lockdown::LOCKDOWN_TYPE_HARD,
@@ -250,13 +252,13 @@ class ProcessManager implements Contracts\ProcessManager
     /**
      * @throws Exception
      */
-    private function notify(string $subject, string $msg, string $type, array $details): void
+    private function notify(?array $recipients, string $subject, string $msg, string $type, array $details): void
     {
-        if (empty(config('process-manager.notify_on_lockdown'))) {
+        if (empty($recipients)) {
             return;
         }
 
-        Mail::to(config('process-manager.notify_on_lockdown'))->send(new Lockdown($subject, $msg, $type, $details));
+        Mail::to($recipients)->send(new Lockdown($subject, $msg, $type, $details));
     }
 
     private function persistStep(

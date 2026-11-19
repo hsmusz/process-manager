@@ -83,7 +83,8 @@ class ProcessQueueTest extends TestCase
     public function test_retry_notification_is_sent_once_at_configured_attempt(): void
     {
         Mail::fake();
-        config()->set('process-manager.notify_on_lockdown', [['email' => 'ops@example.com', 'name' => 'Ops']]);
+        config()->set('process-manager.notify_on_lockdown', [['email' => 'client@example.com', 'name' => 'Client']]);
+        config()->set('app.notify_on_error', ['dev@example.com']);
         config()->set('process-manager.notify_on_retry_attempts', 2);
         FakeProcess::$onStep = static fn() => throw new Exception('Magento 503');
         $process = $this->createProcess(ProcessStatus::PENDING);
@@ -100,6 +101,7 @@ class ProcessQueueTest extends TestCase
 
         $run();
         Mail::assertSent(Lockdown::class, 1);
+        Mail::assertSent(Lockdown::class, fn(Lockdown $mail) => $mail->hasTo('dev@example.com') && !$mail->hasTo('client@example.com'));
 
         $run();
         Mail::assertSent(Lockdown::class, 1);

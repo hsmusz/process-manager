@@ -36,7 +36,7 @@ return [
     | Retry notification
     |--------------------------------------------------------------------------
     |
-    | Notify notify_on_lockdown recipients once, when a process has failed
+    | Notify app.notify_on_error recipients once, when a process has failed
     | this many times and is still being retried (its channel is stopped).
     | 0 disables the notification.
     |
