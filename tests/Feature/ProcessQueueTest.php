@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Movecloser\ProcessManager\Contracts\ProcessesRepository;
 use Movecloser\ProcessManager\Enum\ProcessStatus;
 use Movecloser\ProcessManager\Exceptions\ProcessException;
 use Movecloser\ProcessManager\Lockdown\CommandLock;
+use Movecloser\ProcessManager\Lockdown\Mail\Lockdown;
 use Movecloser\ProcessManager\Models\Process;
 use Movecloser\ProcessManager\Processes\AbstractProcess;
 use Movecloser\ProcessManager\ProcessManagerFactory;
@@ -75,6 +78,32 @@ class ProcessQueueTest extends TestCase
 
         $this->assertSame(ProcessStatus::INFO, $process->fresh()->status);
         $this->assertSame(0, FakeProcess::$finished);
+    }
+
+    public function test_retry_notification_is_sent_once_at_configured_attempt(): void
+    {
+        Mail::fake();
+        config()->set('process-manager.notify_on_lockdown', [['email' => 'ops@example.com', 'name' => 'Ops']]);
+        config()->set('process-manager.notify_on_retry_attempts', 2);
+        FakeProcess::$onStep = static fn() => throw new Exception('Magento 503');
+        $process = $this->createProcess(ProcessStatus::PENDING);
+        $run = function () use ($process): void {
+            try {
+                ProcessManagerFactory::make($process->fresh(), 'default')->handle();
+            } catch (Exception $e) {
+                $this->assertSame('Magento 503', $e->getMessage());
+            }
+        };
+
+        $run();
+        Mail::assertNothingSent();
+
+        $run();
+        Mail::assertSent(Lockdown::class, 1);
+
+        $run();
+        Mail::assertSent(Lockdown::class, 1);
+        $this->assertSame(ProcessStatus::RETRY, $process->fresh()->status);
     }
 
     public function test_worker_requires_channel(): void

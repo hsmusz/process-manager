@@ -97,22 +97,29 @@ class ProcessManager implements Contracts\ProcessManager
             $multiply = max($this->model->attempts - 3, 1);
             $this->model->retry_after = Carbon::now()->addSeconds(self::RETRY_AFTER * $multiply);
             $this->model->save();
+
+            if ($this->model->attempts === config('process-manager.notify_on_retry_attempts')) {
+                $this->notify(
+                    config('app.name') . ' - PROCESS MANAGER RETRY',
+                    sprintf(
+                        'Process %d [%s] failed %d times and is still retrying: %s',
+                        $this->model->id,
+                        $this->channel,
+                        $this->model->attempts,
+                        $e->getMessage(),
+                    ),
+                    Lockdown::LOCKDOWN_TYPE_SOFTLY,
+                    $details,
+                );
+            }
         } else {
             $this->setStatus($status);
-
-            if (empty(config('process-manager.notify_on_lockdown'))) {
-                return;
-            }
-
-            Mail::to(config('process-manager.notify_on_lockdown'))
-                ->send(
-                    new Lockdown(
-                        config('app.name') . ' - PROCESS MANAGER LOCKDOWN!',
-                        $e->getMessage(),
-                        Lockdown::LOCKDOWN_TYPE_HARD,
-                        $details,
-                    )
-                );
+            $this->notify(
+                config('app.name') . ' - PROCESS MANAGER LOCKDOWN!',
+                $e->getMessage(),
+                Lockdown::LOCKDOWN_TYPE_HARD,
+                $details,
+            );
         }
     }
 
@@ -243,6 +250,15 @@ class ProcessManager implements Contracts\ProcessManager
     /**
      * @throws Exception
      */
+    private function notify(string $subject, string $msg, string $type, array $details): void
+    {
+        if (empty(config('process-manager.notify_on_lockdown'))) {
+            return;
+        }
+
+        Mail::to(config('process-manager.notify_on_lockdown'))->send(new Lockdown($subject, $msg, $type, $details));
+    }
+
     private function persistStep(
         ?string $step,
         ProcessStatus $status,
